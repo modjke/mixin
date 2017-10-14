@@ -299,17 +299,36 @@ class Mixin
 	static function injectBaseConstructor(mf:Field, cf:Field)
 	{
 		var mfunc = extractFFunFunction(mf);	
-		var cfuncExpr = extractFFunFunction(cf).expr.expr;	//should be a block
+		var injectExpr = extractFFunFunction(cf).expr;	//should be a block
+		
+		function searchForReturn(e:Expr)
+		{
+			switch (e.expr)
+			{
+				case EReturn(_):
+					Context.fatalError('Constructors with <return> statements can\'t be overwritten', cf.pos);
+				case _:
+					e.iter(searchForReturn);
+			}
+		}
+		
+		searchForReturn(injectExpr);
 		
 		copyMeta(mf, cf);
 		
+		var injected = false;
 		//replace base.$oldName with this.$newName
 		function searchAndReplace(e:Expr)
 		{			
 			switch (e.expr)
 			{
 				case ECall(macro base, []):										
-					e.expr = cfuncExpr;
+					if (!injected)
+					{
+						injected = true;
+						e.expr = injectExpr.expr;
+					} else 
+						Context.fatalError('base() constructor called more that once', mf.pos);				
 				case _:
 					e.iter(searchAndReplace);
 			}			

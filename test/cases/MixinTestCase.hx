@@ -14,7 +14,7 @@ class MixinTestCase extends TestCase
 		var o = new Object();
 		assertEquals(o.baseProp, "overwritten base property");
 		var i = cast(o, BasicMixin);
-		assertEquals(i.baseProp, "overwritten base property");
+		assertEquals(i.baseProp, "overwritten base property");		
 	}
 	
 }
@@ -34,7 +34,8 @@ class Object implements BasicMixin
 
 	public function new()
 	{
-		trace("Constructor was called");
+		
+		trace("Object new was called");
 	}
 }
 
@@ -75,6 +76,8 @@ class Object implements BasicMixin
 	//base should be called
 	@overwrite public function new() {
 		base();
+
+		trace("Mixin new was called");
 	}
 	
 }
