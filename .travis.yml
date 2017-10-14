@@ -1,0 +1,9 @@
+git:
+    depth: 1
+
+language: haxe
+haxe:
+  - "3.4.4"
+hxml:
+  - travis.hxml
+sudo: false

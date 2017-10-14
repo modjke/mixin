@@ -1,0 +1,9 @@
+extraParams.hxml
+
+-cp lib
+-cp test
+-dce full
+-debug
+
+-main RunAll
+--interp
