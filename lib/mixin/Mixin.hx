@@ -102,11 +102,13 @@ class Mixin
 		
 		for (iface in lc.interfaces)
 		{
-			var ct = iface.t.get();
-			if (ct.meta.has("mixin"))
+			var ifaceClass = iface.t.get();
+			if (ifaceClass.meta.has("mixin"))
 			{				
-				var fqlName = getFqlClassName(ct);
-				for (mf in mixins.get(fqlName))
+				var classFql = getFqlClassName(lc);				
+				var mixinFql = getFqlClassName(ifaceClass);
+
+				for (mf in mixins.get(mixinFql))
 				{
 					//mf - mixin field
 					//cf - existing class field (can be null)
@@ -115,46 +117,28 @@ class Mixin
 					switch (getFieldMixinType(mf))
 					{
 						case MIXIN:
-							
+							if (cf == null)
+								fields.push(mf);
+							else 
+								Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
 						case BASE:
-							
-						case OVERWRITE:
-							
-					}
-					
-					switch (mf.kind)
-					{
-						
-						case FFun(f):	
-							
-							
-							if (hasMetaWithName(mf.meta, "overwrite"))
+							if (cf != null)
 							{
-								if (canFieldBeOverwritten(mf,cf))
-								{									
-									injectMethodCall(mf, cf);
-									fields.push(mf);
+								if (!satisfiesInterface(mf, cf))
+								{
+									Context.warning('@base field for <${cf.name}> defined here', mf.pos);
+									Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
 								}
-								else 
-									Context.fatalError('Mixin @overwrite method (${mf.name}) signature differs from base', mf.pos);
 							} else 
-								if (cf == null)
-									fields.push(mf)
-								else
-									Context.fatalError('Method (${mf.name}) overwrites base method with the same name, but has no @overwrite meta', mf.pos);
-									
-						case FVar(t, e):
-							
-							// no meta = do not overwrite, 
-							
-							if (canFieldBeOverwritten(mf, cf))
+								Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
+						case OVERWRITE:
+							if (cf != null)
 							{
-								
-							} else {
-								
+								overwriteMethod(mixinFql, mf, cf);
+							} else {								
+								Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be added as @mixin', lc.pos);
 							}
 							
-						case _:
 							fields.push(mf);
 					}
 				}
@@ -199,9 +183,9 @@ class Mixin
 		switch (f.kind)
 		{
 			case FVar(t, e):				
-				Context.fatalError('var can\'t be overwritten (@overwrite)', f.pos);
+				Context.fatalError('var can\'t be overwritten, makes no sense', f.pos);
 			case FProp(get, set, t, e):				
-				Context.fatalError('property can\'t be overwritten (@overwrite), but it\'s getter/setter can be', f.pos);
+				Context.fatalError('property can\'t be overwritten, but it\'s getter/setter can be', f.pos);
 			case FFun(func):
 				if (func.expr == null) 
 					Context.fatalError('@overwrite method should have implementation (body)', f.pos);
@@ -259,27 +243,39 @@ class Mixin
 	}
 		
 	/**
-	 * Injects cf (class field) method into mf (mixin) method
+	 * Renames old (cf) method to mixinFql + _ + cf.name
+	 * Adding mixin fully qualified class name (mixinFql) avoids conflicts when more than one mixin overwrites method //fix my english :(
+	 * Replaces all original method calls withing mixin method with renamed one
+	 * 
 	 * @param	mixinFql
 	 * @param	mf
 	 * @param	cf
 	 */
-	static function injectMethodCall(mf:Field, cf:Field)
+	static function overwriteMethod(mixinFql:String, mf:Field, cf:Field)
 	{		
-		var mfunc = extractFFunFunction(mf);
-		var cfunc = extractFFunFunction(cf);
-		
+
+		var original = cf.name;
+		var renamed = mixinFql.replace(".", "_").toLowerCase() + "_" + original;
+		cf.name = renamed;
+
 		//replace base.$oldName with this.$newName
-		mfunc.expr.iter(function (e)
+		function searchAndReplace(e:Expr)
 		{
 			switch (e.expr)
 			{
-				case ECall(e.expr => EField(macro base, name), params) if (name == cf.name):					
-					e = macro ${cfunc.expr};
+				case EField(macro base, name) if (name == original):					
+					e.expr = EField(macro this, renamed);
 				case _:
-			}
-		});			
+					e.iter(searchAndReplace);
+			}			
+		};		
+		
+		
+		var mfunc = extractFFunFunction(mf);		
+		searchAndReplace(mfunc.expr);
 	}
+	
+	
 	
 	static function getFqlClassName(ct:ClassType)
 	{
@@ -292,47 +288,41 @@ class Mixin
 	}
 	
 	/**
-	 * For all: compares name, kind, type
-	 * For FVar | FProp: compares default values, error if different
-	 * For FFun: compares signatures, ignores body (expr), that is: two methods with the same api and different implementation considered equal
-	 * @param	a should not be null (mixin field)
-	 * @param	b can be null (class field)
-	 * @return
+	 * Checks if field satisfies interface/mixin (interf) field
+	 * @param	interf mixin field
+	 * @param	field can be null, false returned
+	 * @return 	true if satisfies
 	 */
-	static function canFieldBeOverwritten(a:Field, b:Null<Field>):Bool
+	static function satisfiesInterface(interf:Field, field:Null<Field>):Bool
 	{		
-		if (a == null) 
-			throw 'First field to compare should not be null!';
+		if (interf == null) 
+			throw 'Interface field should not be null';
 		
-		if (b != null && a.name == b.name && Same.access(a.access, b.access))
+		if (field != null && 
+			interf.name == field.name && 
+			Same.access(interf.access, field.access))
 		{
-			
-			switch ([a.kind,b.kind])
+			return switch ([interf.kind,field.kind])
 			{
 				case [FFun(af), FFun(bf)]:
-				
-					return 
-						Same.functionArgs(af.args, bf.args) &&
-						Same.complexTypes(af.ret, bf.ret) &&
-						Same.typeParamDecls(af.params, bf.params);												
+
+					Same.functionArgs(af.args, bf.args) &&
+					Same.complexTypes(af.ret, bf.ret) &&
+					Same.typeParamDecls(af.params, bf.params);												
 					
 				case [FProp(ag, as, at, ae), FProp(bg, bs, bt, be)]:
 					
-					if (be != null && !Same.exprs(ae, be))					
-						Context.fatalError('Mixin initialiazation value for exising field is different: ${b.name}', b.pos);
-						
-					return 
-						ag == bg &&
-						as == bs &&
-						Same.complexTypes(at, bt);
+					ag == bg &&
+					as == bs &&
+					Same.complexTypes(at, bt);
 						
 				case [FVar(at, ae), FVar(bt, be)]:
+				
+					Same.complexTypes(at, bt);
 					
-					if (be != null && !Same.exprs(ae, be))					
-						Context.fatalError('Mixin initialiazation value for exising field is different: ${b.name}', b.pos);			
+				case _:		
 					
-					return at.equals(bt);
-				case _:					
+					false;
 			}			
 		}
 		

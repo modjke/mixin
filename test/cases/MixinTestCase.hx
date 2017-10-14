@@ -22,8 +22,14 @@ class Object implements BasicMixin
 	public var baseProp(get, never):String;
 	function get_baseProp() return "base property";
 	
-	var baseVar:Float = 0.0;
+	var baseVar:Float = 0;
+	public var pBaseVar:Float;
 	
+	function baseMethod():Void
+	{
+		
+	}
+
 	public function new()
 	{
 		
@@ -50,10 +56,10 @@ class Object implements BasicMixin
 		return "overwritten " + base.get_baseProp();
 	}
 	
-	/*
+	
 	//public
 	@mixin public var pMixinVar:Float = 0.0;	//mixin adds this var, raises exception if base already have it (default)
-	@base public var pBaseVar:Float = 0.0;		//base must have this var, raises exception if base does not have it													
+	@base public var pBaseVar:Float;		//base must have this var, raises exception if base does not have it													
 	
 
 										
@@ -68,5 +74,5 @@ class Object implements BasicMixin
 	@overwrite function new() {
 		base();
 	}
-	*/
+	
 }
