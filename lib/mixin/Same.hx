@@ -26,11 +26,13 @@ class Same
 	
 	static function metadatas(?a:Metadata, ?b:Metadata)
 	{
-		return arrays(a, b, function(a, b)
-		{
-			return  a.name == b.name &&
-					arraysOfExpr(a.params, b.params);
-		});
+		return arrays(a, b, metaEntries);
+	}
+	
+	static function metaEntries(?a:MetadataEntry, ?b:MetadataEntry)
+	{
+		return a.name == b.name &&
+			   arraysOfExpr(a.params, b.params);
 	}
 	
 	static function access(?a:Array<Access>, ?b:Array<Access>)

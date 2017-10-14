@@ -59,15 +59,18 @@ class Mixin
 		
 		for (field in buildFields)
 		{				
-			var isConstructor = field.name == "new";
-			if (isConstructor) continue;	//implement constructor handling later
-			
+			var isConstructor = field.name == "new";	
 			var isPublic = field.access.has(APublic);
+			
 			switch (getFieldMixinType(field))
 			{	
 				case MIXIN:
+					if (isConstructor) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
+						
 					makeSureFieldCanBeMixin(field, buildFields);
 				case BASE:
+					if (isConstructor) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
+					
 					makeSureFieldCanBeBase(field);
 				case OVERWRITE:	
 					makeSureFieldCanBeOverwrite(field);
@@ -75,7 +78,7 @@ class Mixin
 			}
 			
 			mixinFields.push(field);			
-			if (isPublic)
+			if (isPublic && !isConstructor)
 				interfaceFields.push(makeInterfaceField(field));
 		}
 		
@@ -134,7 +137,22 @@ class Mixin
 						case OVERWRITE:
 							if (cf != null)
 							{
-								overwriteMethod(mixinFql, mf, cf);
+								if (satisfiesInterface(mf, cf))
+								{
+									var isConstructor = cf.name == "new";
+									if (isConstructor) {
+										
+										injectBaseConstructor(mf, cf);
+										fields.remove(cf);
+									}
+									else
+										overwriteMethod(mixinFql, mf, cf);
+								} else 
+								{
+									Context.warning('@base field for <${cf.name}> defined here', mf.pos);
+									Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
+								}
+								
 							} else {								
 								Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be added as @mixin', lc.pos);
 							}
@@ -257,6 +275,8 @@ class Mixin
 		var original = cf.name;
 		var renamed = mixinFql.replace(".", "_").toLowerCase() + "_" + original;
 		cf.name = renamed;
+		
+		copyMeta(mf, cf);
 
 		//replace base.$oldName with this.$newName
 		function searchAndReplace(e:Expr)
@@ -276,6 +296,54 @@ class Mixin
 	}
 	
 	
+	static function injectBaseConstructor(mf:Field, cf:Field)
+	{
+		var mfunc = extractFFunFunction(mf);	
+		var cfuncExpr = extractFFunFunction(cf).expr.expr;	//should be a block
+		
+		copyMeta(mf, cf);
+		
+		//replace base.$oldName with this.$newName
+		function searchAndReplace(e:Expr)
+		{			
+			switch (e.expr)
+			{
+				case ECall(macro base, []):										
+					e.expr = cfuncExpr;
+				case _:
+					e.iter(searchAndReplace);
+			}			
+		};		
+
+		searchAndReplace(mfunc.expr);
+	}
+	
+	
+	/**
+	 * Copies meta from class field (cf) to mixin field (mf)
+	 * @param	mf
+	 * @param	cf
+	 */
+	static function copyMeta(mf:Field, cf:Field)
+	{
+		if (cf.meta != null)
+		{
+			for (m in cf.meta)
+			{
+				if (mf.meta == null) mf.meta = [];
+				var dm = getMetaWithName(mf.meta, m.name);
+				if (dm != null)
+				{
+					if (!Same.metaEntries(m, dm))
+					{
+						Context.warning('Conflicting mixin field defined here', mf.pos);
+						Context.fatalError('Found conflicting base|mixin metadata @${m.name} for field <${cf.name}>', cf.pos);
+					}
+				} else 
+					mf.meta.push(m);
+			}
+		}
+	}
 	
 	static function getFqlClassName(ct:ClassType)
 	{
@@ -285,6 +353,11 @@ class Mixin
 	static function hasMetaWithName(meta:Metadata, name:String):Bool
 	{
 		return meta.exists(function (e) return e.name == name);
+	}
+	
+	static function getMetaWithName(meta:Metadata, name:String):MetadataEntry
+	{
+		return meta.find(function (e) return e.name == name);
 	}
 	
 	/**
