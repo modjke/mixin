@@ -15,14 +15,16 @@ class MixinTestCase extends TestCase
 		assertEquals(o.baseProp, "overwritten base property");
 		var i = cast(o, Mixin);
 		assertEquals(i.baseProp, "overwritten base property");		
+		
+		o.getValue();
 	}
 	
 }
 
-class Object implements Mixin implements Mixin
+class Object implements Mixin implements SampleMixin
 {
 	public var baseProp(get, never):String;
-	function get_baseProp() return "base property";
+	function get_baseProp():String return "base property";
 	
 	var baseVar:Float = 0;
 	public var pBaseVar:Float;
@@ -52,10 +54,10 @@ class Object implements Mixin implements Mixin
 	@base var baseVar:Float;			//base must have this private var, raises exception if base does not have it	
 	
 	@mixin var prop(get, never):String;
-	function get_prop() return "";
+	function get_prop():String return "";
 	
 	@base public var baseProp(get, never):String;
-	@overwrite function get_baseProp() {
+	@overwrite function get_baseProp():String {
 		return "overwritten " + base.get_baseProp();
 	}
 	
@@ -66,9 +68,9 @@ class Object implements Mixin implements Mixin
 	
 
 										
-	@mixin function mixinMethod() {}			//mixin method, raises exception if base already have it (default)
+	@mixin function mixinMethod():Void {}			//mixin method, raises exception if base already have it (default)
 	@base function baseMethod():Void;			//base must have this method, raises exception if base does not have it	
-	@overwrite function overwriteMethod() {}	//similar to base, but allows mixin method to overwrite base's method, 'base.method()' calls base method	
+	@overwrite function overwriteMethod():Void {}	//similar to base, but allows mixin method to overwrite base's method, 'base.method()' calls base method	
 	
 	
 	//constructor can be mixed in too

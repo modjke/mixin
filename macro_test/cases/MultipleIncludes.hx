@@ -1,5 +1,5 @@
-//-test1-/Mixin <cases.MultipleImplements.Mixin> was already included in <cases.MultipleImplements.SuperClass>/
-//-test2-/Mixin <cases.MultipleImplements.Mixin> was already included in <cases.MultipleImplements>/
+//-test1-/Mixin <cases.MultipleIncludes.Mixin> was already included in <cases.MultipleIncludes.SuperClass>/
+//-test2-/Mixin <cases.MultipleIncludes.Mixin> was already included in <cases.MultipleIncludes>/
 package cases;
 
 //when mixin included more that once in a hierarchy

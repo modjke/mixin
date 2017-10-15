@@ -6,10 +6,11 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
+import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
 
-import haxe.macro.TypeTools.*;
 using haxe.macro.Tools;
+using mixin.MoreComplexTypeTools;
 
 using haxe.EnumTools;
 using StringTools;
@@ -22,9 +23,13 @@ enum FieldMixinType
 	OVERWRITE;
 }
 
+typedef CachedMixin = {
+	fields:Array<Field>
+}
+
 class Mixin 
 {
-	static var mixins:StringMap<Array<Field>> = new StringMap();
+	static var mixins:StringMap<CachedMixin> = new StringMap();
 	
 	public static function sugar():Array<Field>
 	{
@@ -47,8 +52,10 @@ class Mixin
 		
 		if (!lc.isInterface)
 			Context.fatalError('Mixin should be declared as interface', lc.pos);
+
+		var mixinFql = getFqlClassName(lc);
 		
-		lc.meta.add(":autoBuild", [macro mixin.Mixin.includeMixin()], lc.pos);
+		lc.meta.add(":autoBuild", [macro mixin.Mixin.includeMixin($v{mixinFql})], lc.pos);
 		
 		if (!lc.meta.has("mixin")) lc.meta.add("mixin", [], lc.pos);
 				
@@ -61,6 +68,8 @@ class Mixin
 		{				
 			var isConstructor = field.name == "new";	
 			var isPublic = field.access.has(APublic);
+			
+			resolveComplexTypesInField(field);
 			
 			switch (getFieldMixinType(field))
 			{	
@@ -82,11 +91,13 @@ class Mixin
 				interfaceFields.push(makeInterfaceField(field));
 		}
 		
-		var fqlName = getFqlClassName(lc);
-		if (!mixins.exists(fqlName))
-			mixins.set(fqlName, mixinFields);		
+		
+		if (!mixins.exists(mixinFql))
+			mixins.set(mixinFql, {
+				fields: mixinFields
+			});		
 		else
-			throw 'Mixin for ${fqlName} is already existed...';
+			throw 'Mixin with ${mixinFql} already existed...';
 		
 		return interfaceFields;
 	}
@@ -98,77 +109,95 @@ class Mixin
 	 * @return
 	 */
 	@:noCompletion
-	public static function includeMixin():Array<Field>
+	public static function includeMixin(mixinFql:String):Array<Field>
 	{
-		var lc = Context.getLocalClass().get();
+		var lc = Context.getLocalClass().get();		
+		var classFql = getFqlClassName(lc);				
 		var fields = Context.getBuildFields();
 		
-		for (iface in lc.interfaces)
+		assertWasNotYetIncluded(lc, mixinFql);
+
+		var cached = mixins.get(mixinFql);
+		
+		for (mf in cached.fields)
 		{
-			var mixinClass = iface.t.get();
-			if (mixinClass.meta.has("mixin"))
-			{	
-				assertWasNotYetIncluded(lc, mixinClass);
-				
-				var classFql = getFqlClassName(lc);				
-				var mixinFql = getFqlClassName(mixinClass);
-				
-				for (mf in mixins.get(mixinFql))
-				{
-					//mf - mixin field
-					//cf - existing class field (can be null)
-					var cf = fields.find(function (f) return f.name == mf.name);
-					
-					switch (getFieldMixinType(mf))
-					{
-						case MIXIN:
-							if (cf == null)
-								fields.push(mf);
-							else 
-								Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
-						case BASE:
-							if (cf != null)
-							{
-								if (!satisfiesInterface(mf, cf))
-								{
-									Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
-									Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
-								}
-							} else 
-								Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
-						case OVERWRITE:
-							if (cf != null)
-							{
-								if (satisfiesInterface(mf, cf))
-								{
-									var isConstructor = cf.name == "new";
-									if (isConstructor) {
-										
-										injectBaseConstructor(mf, cf);
-										fields.remove(cf);
-									}
-									else
-										overwriteMethod(mixinFql, mf, cf);
-								} else 
-								{
-									Context.warning('@overwrite field for <${cf.name}> is defined here', mf.pos);
-									Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
-								}
-								
-							} else {								
-								Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);
-							}
-							
-							fields.push(mf);
-					}
-				}
-			}
+			//mf - mixin field
+			//cf - existing class field (can be null)
+			var cf = fields.find(function (f) return f.name == mf.name);
 			
+			makeSureFieldIsExplicitlyTyped(mf);
+			switch (getFieldMixinType(mf))
+			{
+				case MIXIN:
+					if (cf == null)
+						fields.push(mf);
+					else 
+						Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
+				case BASE:
+					if (cf != null)
+					{
+						makeSureFieldIsExplicitlyTyped(cf);
+						
+						if (!satisfiesInterface(mf, cf))
+						{
+							Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
+							Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
+						}
+					} else 
+						Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
+				case OVERWRITE:
+					if (cf != null)
+					{
+						makeSureFieldIsExplicitlyTyped(cf);
+						
+						if (satisfiesInterface(mf, cf))
+						{
+							var isConstructor = cf.name == "new";
+							if (isConstructor) {
+								
+								injectBaseConstructor(mf, cf);
+								fields.remove(cf);
+							}
+							else
+								overwriteMethod(mixinFql, mf, cf);
+						} else 
+						{
+							Context.warning('@overwrite field for <${cf.name}> is defined here', mf.pos);
+							Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
+						}
+						
+					} else {								
+						Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);
+					}
+					
+					fields.push(mf);
+			}
 		}
+		
+		
+	
 
 		return fields;
 	}
 	
+	
+	static function makeSureFieldIsExplicitlyTyped(f:Field)
+	{
+		var isConstructor = f.name == "new";
+		if (!isConstructor)
+			switch (f.kind)
+			{
+				case FVar(t, e):
+					if (t == null)
+						Context.fatalError('Mixin requires vars to be explicitly typed', f.pos);
+				case FProp(get, set, t, e):
+					if (t == null)
+						Context.fatalError('Mixin requires properties to be explicitly typed', f.pos);
+				case FFun(func):
+					if (func.ret == null)
+						Context.fatalError('Mixin requires methods to be explicitly typed', f.pos);
+			}
+	}
 	
 	static function makeSureFieldCanBeBase(f:Field)
 	{
@@ -229,6 +258,47 @@ class Mixin
 		}
 	}
 	
+	static function resolveComplexTypesInField(field:Field)
+	{
+		
+		var p = field.pos;
+		field.kind = switch (field.kind)
+		{
+			case FVar(t, e): 
+				FVar(t.resolve(p), e);				
+			case FProp(get, set, t, e):
+				FProp(get, set, t.resolve(p), e);
+			case FFun(f):			
+				for (a in f.args) a.type = a.type.resolve(p);
+				f.ret = f.ret.resolve(p);
+				
+				if (f.expr != null)
+					resolveComplexTypesInExpr(f.expr, p);
+				
+				FFun(f);
+		}
+		
+	}
+	
+	static function resolveComplexTypesInExpr(expr:Expr, pos:Position)
+	{
+		function iterate(e:Expr)
+		{
+			switch (e.expr)
+			{
+				case ENew(t, p):
+					var ct = ComplexType.TPath(t).resolve(pos);					
+					e.expr = ENew(ct.extractTypePath(), p);
+				case _:
+					
+			}
+			
+			e.iter(iterate);
+		}
+		
+		iterate(expr);
+	}
+	
 	/**
 	 * Removes access, initial values, FFun exprs and 
 	 * returns new valid interface field
@@ -248,7 +318,7 @@ class Mixin
 				case FFun(f): 
 					FFun({
 						args: f.args,
-						ret: f.ret != null ? f.ret : macro:Void,
+						ret: f.ret,
 						params: f.params,
 						expr: null
 					});
@@ -302,38 +372,30 @@ class Mixin
 	 * @param	base
 	 * @param	mixin
 	 */
-	static function assertWasNotYetIncluded(base:ClassType, mixin:ClassType)
+	static function assertWasNotYetIncluded(base:ClassType, mixinFql:String)
 	{
-		var includedMeta = '__mixinIncluded';
-		var mixinFql = getFqlClassName(mixin);
+		var includedMeta = '__included__' + mixinFql.replace(".","_").toLowerCase();
 		var baseFql = getFqlClassName(base);
 		
 		inline function hasIncludedMeta(base:ClassType)
 		{
-			return  base.meta.has(includedMeta) &&
-					{
-						var metas = base.meta.extract(includedMeta);
-						metas.exists(function (m)
-						{
-							var p = m.params.length > 0 ? m.params[0] : null;
-							return p != null &&
-								   p.getValue() == mixinFql;
-						});						
-					}
+			return base.meta.has(includedMeta);
 		}
 		
 		inline function addIncludedMeta(base:ClassType)
 		{
-			base.meta.add(includedMeta, [macro $v{mixinFql}], base.pos);
+			base.meta.add(includedMeta, [], base.pos);
 		}
-				
+		
 		if (hasIncludedMeta(base))
 		{
 			Context.fatalError('Mixin <${mixinFql}> was already included in <${baseFql}>', base.pos);
 		} else {
 			addIncludedMeta(base);
-			if (base.superClass != null && base.superClass.t.get() != null) 
-				assertWasNotYetIncluded(base.superClass.t.get(), mixin);
+			
+			if (base.superClass != null && base.superClass.t.get() != null) {
+				assertWasNotYetIncluded(base.superClass.t.get(), mixinFql);
+			}
 		}
 	}
 	
@@ -441,23 +503,25 @@ class Mixin
 			interf.name == field.name && 
 			Same.access(interf.access, field.access))
 		{
+			var ap = interf.pos;
+			var bp = field.pos;
 			return switch ([interf.kind,field.kind])
 			{
 				case [FFun(af), FFun(bf)]:
 
-					Same.functionArgs(af.args, bf.args) &&
-					Same.complexTypes(af.ret, bf.ret) &&
+					Same.functionArgs(af.args, bf.args, ap, bp) &&
+					Same.complexTypes(af.ret, bf.ret, ap, bp) &&
 					Same.typeParamDecls(af.params, bf.params);												
 					
 				case [FProp(ag, as, at, ae), FProp(bg, bs, bt, be)]:
 					
 					ag == bg &&
 					as == bs &&
-					Same.complexTypes(at, bt);
+					Same.complexTypes(at, bt, ap, bp);
 						
 				case [FVar(at, ae), FVar(bt, be)]:
 				
-					Same.complexTypes(at, bt);
+					Same.complexTypes(at, bt, ap, bp);
 					
 				case _:		
 					

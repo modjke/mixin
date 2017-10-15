@@ -1,4 +1,5 @@
 package mixin;
+import haxe.macro.ComplexTypeTools;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Access;
 import haxe.macro.Expr.ComplexType;
@@ -8,34 +9,35 @@ import haxe.macro.Expr.TypeParam;
 import haxe.macro.Expr.TypeParamDecl;
 
 using haxe.macro.Tools;
+using mixin.MoreComplexTypeTools;
 
 @:publicFields
 class Same 
 {
-	static function functionArgs(?a:Array<FunctionArg> , ?b:Array<FunctionArg>):Bool
+	static function functionArgs(a:Array<FunctionArg>, b:Array<FunctionArg>, ap:Position, bp:Position):Bool
 	{	
 		return arrays(a, b, function(a, b)
 		{
 			return  a.name == b.name &&
 					a.opt == b.opt &&
 					metadatas(a.meta, b.meta) &&					
-					complexTypes(a.type, b.type) &&
+					complexTypes(a.type, b.type, ap, bp) &&
 					exprs(a.value, b.value);
 		});
 	}
 	
-	static function metadatas(?a:Metadata, ?b:Metadata)
+	static function metadatas(a:Metadata, b:Metadata)
 	{
 		return arrays(a, b, metaEntries);
 	}
 	
-	static function metaEntries(?a:MetadataEntry, ?b:MetadataEntry)
+	static function metaEntries(a:MetadataEntry, b:MetadataEntry)
 	{
 		return a.name == b.name &&
 			   arraysOfExpr(a.params, b.params);
 	}
 	
-	static function access(?a:Array<Access>, ?b:Array<Access>)
+	static function access(a:Array<Access>, b:Array<Access>)
 	{
 		return arrays(a, b, function(a, b)
 		{
@@ -43,12 +45,13 @@ class Same
 		});
 	}
 	
-	static function typeParams(?a:Array<TypeParam>, ?b:Array<TypeParam>)
+	static function typeParams(a:Array<TypeParam>, b:Array<TypeParam>, ap:Position, bp:Position)
 	{
 		return arrays(a, b, function(a, b)
+		
 			return switch [a, b]
 			{
-				case [TPType(at), TPType(bt)]: complexTypes(at, bt);
+				case [TPType(at), TPType(bt)]: complexTypes(at, bt, ap, bp);
 				case [TPExpr(ae), TPExpr(be)]: exprs(ae, be);
 				case [_, _]: false;				
 			});
@@ -62,12 +65,11 @@ class Same
 		return true;
 	}
 	
-	static function complexTypes(a:ComplexType, b:ComplexType)
+	static function complexTypes(a:ComplexType, b:ComplexType, apos:Position, bpos:Position)
 	{		
-		//TODO: is there a better way?
-		var as = a != null ? a.toString() : null;
-		var bs = b != null ? b.toString() : null;
-		return as == bs;
+		//TODO: find a better way
+		return  a.resolve(apos).safeToString() == 
+				b.resolve(bpos).safeToString();
 	}
 	
 	static function exprs(?a:Expr, ?b:Expr)
