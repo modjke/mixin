@@ -1,4 +1,4 @@
 -debug
 -cp macro_test
 -main MacroTestRunner
--neko macro_test\test_runner.n
+-neko macro_test/test_runner.n
