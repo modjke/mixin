@@ -2,6 +2,8 @@ extraParams.hxml
 
 -cp lib
 -cp test
+-cp macro_test
+
 -dce full
 -debug
 

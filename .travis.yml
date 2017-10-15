@@ -4,6 +4,11 @@ git:
 language: haxe
 haxe:
   - "3.4.4"
-hxml:
-  - travis.hxml
+  
 sudo: false
+
+build: off
+
+test_scripts:
+	- haxe build-macro-runner.hxml && neko macro_test\test_runner.n
+	- haxe test.hxml

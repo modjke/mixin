@@ -129,7 +129,7 @@ class Mixin
 							{
 								if (!satisfiesInterface(mf, cf))
 								{
-									Context.warning('@base field for <${cf.name}> defined here', mf.pos);
+									Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
 									Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
 								}
 							} else 
@@ -149,12 +149,12 @@ class Mixin
 										overwriteMethod(mixinFql, mf, cf);
 								} else 
 								{
-									Context.warning('@base field for <${cf.name}> defined here', mf.pos);
-									Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
+									Context.warning('@overwrite field for <${cf.name}> is defined here', mf.pos);
+									Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
 								}
 								
 							} else {								
-								Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be added as @mixin', lc.pos);
+								Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);
 							}
 							
 							fields.push(mf);
@@ -350,9 +350,12 @@ class Mixin
 			for (m in cf.meta)
 			{
 				if (mf.meta == null) mf.meta = [];
+				
 				var dm = getMetaWithName(mf.meta, m.name);
+
 				if (dm != null)
 				{
+					
 					if (!Same.metaEntries(m, dm))
 					{
 						Context.warning('Conflicting mixin field defined here', mf.pos);
