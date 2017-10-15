@@ -22,7 +22,7 @@ class MacroTestRunner
 	 */
 	public static function main()
 	{
-		var casesPath = 'macro_test\\cases';
+		var casesPath = 'macro_test/cases';
 		var caseFiles = FileSystem.readDirectory(casesPath)
 			.map(function (f) return Path.join([casesPath, f]));
 			
