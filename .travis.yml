@@ -6,5 +6,5 @@ haxe:
   - "3.4.4"
   
 script:
-	- haxe build-macro-runner.hxml && neko macro_test\test_runner.n
-	- haxe test.hxml
+ - haxe build-macro-runner.hxml && neko macro_test\test_runner.n
+ - haxe test.hxml
