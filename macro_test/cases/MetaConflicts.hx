@@ -8,7 +8,7 @@ class MetaConflicts implements Mixin
 	
 	#if test1
 	@conflict(false)
-	function method()
+	function method():Void
 	{
 		
 	}
@@ -20,7 +20,7 @@ class MetaConflicts implements Mixin
 	#if test1
 	@conflict(true)
 	@overwrite 
-	function method() {
+	function method():Void {
 		
 	}
 	#end

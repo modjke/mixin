@@ -36,7 +36,7 @@ class OverwriteMethod implements Mixin
 	#end
 	
 	#if test3
-	@overwrite public function missing()
+	@overwrite public function missing():Void
 	{
 		
 	}

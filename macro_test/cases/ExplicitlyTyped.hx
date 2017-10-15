@@ -1,6 +1,6 @@
-//-test1-/Mixin vars should be explicitly typed/
-//-test2-/Mixin properties should be explicitly typed/
-//-test3-/Mixin methods should be explicitly typed/
+//-test1-/Mixin requires vars to be explicitly typed/
+//-test2-/Mixin requires properties to be explicitly typed/
+//-test3-/Mixin requires methods to be explicitly typed/
 package cases;
 
 class ExplicitlyTyped implements Mixin
