@@ -13,13 +13,13 @@ class MixinTestCase extends TestCase
 	{
 		var o = new Object();
 		assertEquals(o.baseProp, "overwritten base property");
-		var i = cast(o, BasicMixin);
+		var i = cast(o, Mixin);
 		assertEquals(i.baseProp, "overwritten base property");		
 	}
 	
 }
 
-class Object implements BasicMixin
+class Object implements Mixin implements Mixin
 {
 	public var baseProp(get, never):String;
 	function get_baseProp() return "base property";
@@ -39,7 +39,7 @@ class Object implements BasicMixin
 	}
 }
 
-@mixin interface BasicMixin
+@mixin interface Mixin
 {
 	
 	//public variables and methods will become part of the interface

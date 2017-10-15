@@ -105,12 +105,14 @@ class Mixin
 		
 		for (iface in lc.interfaces)
 		{
-			var ifaceClass = iface.t.get();
-			if (ifaceClass.meta.has("mixin"))
-			{				
+			var mixinClass = iface.t.get();
+			if (mixinClass.meta.has("mixin"))
+			{	
+				assertWasNotYetIncluded(lc, mixinClass);
+				
 				var classFql = getFqlClassName(lc);				
-				var mixinFql = getFqlClassName(ifaceClass);
-
+				var mixinFql = getFqlClassName(mixinClass);
+				
 				for (mf in mixins.get(mixinFql))
 				{
 					//mf - mixin field
@@ -294,6 +296,48 @@ class Mixin
 		var mfunc = extractFFunFunction(mf);		
 		searchAndReplace(mfunc.expr);
 	}
+	
+	/**
+	 * Check if anywere in the hierarchy mixin was already included
+	 * @param	base
+	 * @param	mixin
+	 */
+	static function assertWasNotYetIncluded(base:ClassType, mixin:ClassType)
+	{
+		var includedMeta = '__mixinIncluded';
+		var mixinFql = getFqlClassName(mixin);
+		var baseFql = getFqlClassName(base);
+		
+		inline function hasIncludedMeta(base:ClassType)
+		{
+			return  base.meta.has(includedMeta) &&
+					{
+						var metas = base.meta.extract(includedMeta);
+						metas.exists(function (m)
+						{
+							var p = m.params.length > 0 ? m.params[0] : null;
+							return p != null &&
+								   p.getValue() == mixinFql;
+						});						
+					}
+		}
+		
+		inline function addIncludedMeta(base:ClassType)
+		{
+			base.meta.add(includedMeta, [macro $v{mixinFql}], base.pos);
+		}
+				
+		if (hasIncludedMeta(base))
+		{
+			Context.fatalError('Mixin <${mixinFql}> was already included in <${baseFql}>', base.pos);
+		} else {
+			addIncludedMeta(base);
+			if (base.superClass != null && base.superClass.t.get() != null) 
+				assertWasNotYetIncluded(base.superClass.t.get(), mixin);
+		}
+	}
+	
+	
 	
 	
 	static function injectBaseConstructor(mf:Field, cf:Field)

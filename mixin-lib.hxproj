@@ -4,7 +4,7 @@
   <output>
     <movie outputType="CustomBuild" />
     <movie input="" />
-    <movie path="macro-test-runner.hxml" />
+    <movie path="test.hxml" />
     <movie fps="0" />
     <movie width="0" />
     <movie height="0" />
@@ -15,6 +15,8 @@
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
+    <class path="lib" />
+    <class path="test" />
     <class path="macro_test" />
   </classpaths>
   <!-- Build options -->
@@ -22,9 +24,9 @@
     <option directives="" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
-    <option mainClass="MacroTestRunner" />
+    <option mainClass="RunAll" />
     <option enabledebug="False" />
-    <option additional="-debug " />
+    <option additional="--macro addGlobalMetadata(&quot;&quot;, &quot;@:build(mixin.Mixin.sugar())&quot;, true, true, false)&#xA;-dce full&#xA;-debug &#xA;--interp" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -46,7 +48,7 @@
   <options>
     <option showHiddenPaths="True" />
     <option testMovie="Custom" />
-    <option testMovieCommand="cmd /c run-macro-test.bat" />
+    <option testMovieCommand="" />
   </options>
   <!-- Plugin storage -->
   <storage />
