@@ -9,7 +9,7 @@ import haxe.macro.Expr.TypeParam;
 import haxe.macro.Expr.TypeParamDecl;
 
 using haxe.macro.Tools;
-using mixin.MoreComplexTypeTools;
+using mixin.MoreMacroTools;
 
 @:publicFields
 class Same 

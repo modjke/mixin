@@ -10,7 +10,7 @@ import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
 
 using haxe.macro.Tools;
-using mixin.MoreComplexTypeTools;
+using mixin.MoreMacroTools;
 
 using haxe.EnumTools;
 using StringTools;
@@ -280,20 +280,29 @@ class Mixin
 		
 	}
 	
+	// SOME HACKERY LEVEL SHIT RIGHT HERE
 	static function resolveComplexTypesInExpr(expr:Expr, pos:Position)
 	{
 		function iterate(e:Expr)
 		{
+			
 			switch (e.expr)
 			{
 				case ENew(t, p):
 					var ct = ComplexType.TPath(t).resolve(pos);					
 					e.expr = ENew(ct.extractTypePath(), p);
+				case EField(e, f) if (f == "new"):
+					var ct = e.exprToComplexType(pos).resolve(pos);
+					e = Context.parse(ct.toString() + ".new", pos);					
+				case EVars(vars):
+					for (v in vars)
+						v.type = v.type.resolve(pos);
 				case _:
 					
 			}
 			
 			e.iter(iterate);
+			
 		}
 		
 		iterate(expr);

@@ -13,6 +13,9 @@ import cases.other.SomeOtherClass;
 		base();
 		
 		this.otherClass = new SomeOtherClass(0);
+		var factory = cases.other.SomeOtherClass.new;
+		
+		var some:SomeOtherClass;
 	}
 	
 	public function getValue():Int
