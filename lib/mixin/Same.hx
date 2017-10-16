@@ -68,8 +68,8 @@ class Same
 	static function complexTypes(a:ComplexType, b:ComplexType, apos:Position, bpos:Position)
 	{		
 		//TODO: find a better way
-		return  a.resolve(apos).safeToString() == 
-				b.resolve(bpos).safeToString();
+		return  a.resolveComplextType(apos).safeToString() == 
+				b.resolveComplextType(bpos).safeToString();
 	}
 	
 	static function exprs(?a:Expr, ?b:Expr)

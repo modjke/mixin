@@ -27,13 +27,12 @@ class MoreMacroTools
 	}
 	
 	
-	static function isFirstLetterUppercase(s:String):Bool
+	public static function isValidClassName(s:String):Bool
 	{
-		var c = s.charAt(s.length - 1);
-		return c.toUpperCase() == c;
+		return ~/\b[A-Z][_,A-Z,a-z,0-9]*/.match(s);
 	}
 	
-	public static function resolve(t:ComplexType, p:Position):ComplexType
+	public static function resolveComplextType(t:ComplexType, p:Position):ComplexType
 	{
 		if (t == null) return null;
 		

@@ -265,12 +265,12 @@ class Mixin
 		field.kind = switch (field.kind)
 		{
 			case FVar(t, e): 
-				FVar(t.resolve(p), e);				
+				FVar(t.resolveComplextType(p), e);				
 			case FProp(get, set, t, e):
-				FProp(get, set, t.resolve(p), e);
+				FProp(get, set, t.resolveComplextType(p), e);
 			case FFun(f):			
-				for (a in f.args) a.type = a.type.resolve(p);
-				f.ret = f.ret.resolve(p);
+				for (a in f.args) a.type = a.type.resolveComplextType(p);
+				f.ret = f.ret.resolveComplextType(p);
 				
 				if (f.expr != null)
 					resolveComplexTypesInExpr(f.expr, p);
@@ -283,29 +283,46 @@ class Mixin
 	// SOME HACKERY LEVEL SHIT RIGHT HERE
 	static function resolveComplexTypesInExpr(expr:Expr, pos:Position)
 	{
+		var localVars:Array<String> = [];
 		function iterate(e:Expr)
 		{
 			
+			
 			switch (e.expr)
 			{
+				
 				case ENew(t, p):
-					var ct = ComplexType.TPath(t).resolve(pos);					
+					var ct = ComplexType.TPath(t).resolveComplextType(pos);					
 					e.expr = ENew(ct.extractTypePath(), p);
-				case EField(e, f) if (f == "new"):
-					var ct = e.exprToComplexType(pos).resolve(pos);
-					e = Context.parse(ct.toString() + ".new", pos);					
+				case EField(e, f) if (f == "new"):	
+					var ct = e.exprToComplexType(pos).resolveComplextType(pos);
+					e = Context.parse(ct.toString() + ".new", pos);										
 				case EVars(vars):
 					for (v in vars)
-						v.type = v.type.resolve(pos);
+					{
+						localVars.push(v.name);
+						v.type = v.type.resolveComplextType(pos);
+					}
+				
+				case EConst(CIdent(s)):
+					if (s.isValidClassName() && localVars.indexOf(s) == -1)
+					{
+						var ct = ComplexType.TPath({
+							pack: [],
+							name: s
+						}).resolveComplextType(pos);
+						e.expr = Context.parse(ct.toString(), pos).expr;
+					}
 				case _:
 					
+					
 			}
-			
 			e.iter(iterate);
+			
 			
 		}
 		
-		iterate(expr);
+		trace(expr.toString());
 	}
 	
 	/**

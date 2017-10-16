@@ -1,9 +1,10 @@
 package cases.other;
 
+typedef SOC = SomeOtherClass;
 
 class SomeOtherClass 
 {
-	var value:Int;
+	var value:Int;	
 	
 	public function new(value:Int) 
 	{

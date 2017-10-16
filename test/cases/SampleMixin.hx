@@ -16,6 +16,21 @@ import cases.other.SomeOtherClass;
 		var factory = cases.other.SomeOtherClass.new;
 		
 		var some:SomeOtherClass;
+		Type.getClass(SomeOtherClass);
+		Type.getClass(cases.other.SomeOtherClass);
+		var Some:SomeOtherClass = null;
+		Type.getClass(Some);
+		
+		
+		{
+			
+			var some:SOC;
+			Type.getClass(SOC);
+			Type.getClass(SomeOtherClass.SOC);
+			var Some:SOC = null;
+			Type.getClass(Some);
+			
+		}
 	}
 	
 	public function getValue():Int
