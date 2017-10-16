@@ -69,6 +69,8 @@ class Mixin
 			var isConstructor = field.name == "new";	
 			var isPublic = field.access.has(APublic);
 			
+			makeSureFieldIsExplicitlyTyped(field);
+			
 			resolveComplexTypesInField(field);
 			
 			switch (getFieldMixinType(field))
@@ -125,7 +127,7 @@ class Mixin
 			//cf - existing class field (can be null)
 			var cf = fields.find(function (f) return f.name == mf.name);
 			
-			makeSureFieldIsExplicitlyTyped(mf);
+			
 			switch (getFieldMixinType(mf))
 			{
 				case MIXIN:
@@ -179,24 +181,83 @@ class Mixin
 
 		return fields;
 	}
-	
-	
+		
 	static function makeSureFieldIsExplicitlyTyped(f:Field)
 	{
+		
 		var isConstructor = f.name == "new";
+		//skips constructor
 		if (!isConstructor)
+		{
+			
 			switch (f.kind)
 			{
 				case FVar(t, e):
-					if (t == null)
-						Context.fatalError('Mixin requires vars to be explicitly typed', f.pos);
+					if (t == null) {
+						t = magicTypeOf(e, false);						
+						
+						if (t != null)
+							f.kind = FVar(t, e);
+						else
+							Context.fatalError('Mixin requires vars to be explicitly typed', f.pos);						
+					}
 				case FProp(get, set, t, e):
-					if (t == null)
-						Context.fatalError('Mixin requires properties to be explicitly typed', f.pos);
+					if (t == null) {
+						t = magicTypeOf(e, false);						
+						
+						if (t != null)
+							f.kind = FProp(get, set, t, e);
+						else
+							Context.fatalError('Mixin requires vars to be explicitly typed', f.pos);						
+					}
 				case FFun(func):
 					if (func.ret == null)
-						Context.fatalError('Mixin requires methods to be explicitly typed', f.pos);
+					{
+						
+						var ret = magicTypeOf(func.expr, true);
+						
+						if (ret != null)
+							func.ret = ret;
+						else
+							Context.fatalError('Mixin requires methods to be explicitly typed', f.pos);
+					}
 			}
+		}
+		
+	}
+	
+	static function magicTypeOf(expr:Expr, func:Bool = false):Null<ComplexType>
+	{
+		if (expr == null) return func ? (macro:Void) : null;
+			
+		if (func)
+		{
+			var out:ComplexType = null;
+			function lookForReturn(e:Expr)
+			{
+				if (out != null)
+					switch (e.expr)
+					{
+						case EReturn(e):						
+							try {
+								out = e != null ? Context.typeof(e).toComplexType() : null;
+							} catch (any:Dynamic) {}
+						case _: 
+							e.iter(lookForReturn);
+					}
+			}
+			
+			lookForReturn(expr);
+			
+			return out != null ? out : macro:Void;
+		} else 
+			try {			
+				return Context.typeof(expr).toComplexType();
+			} catch (ignore:Dynamic) {
+				return null;
+			}
+		
+		
 	}
 	
 	static function makeSureFieldCanBeBase(f:Field)
@@ -272,9 +333,9 @@ class Mixin
 				for (a in f.args) a.type = a.type.resolveComplextType(p);
 				f.ret = f.ret.resolveComplextType(p);
 				
-				if (f.expr != null)
-					resolveComplexTypesInExpr(f.expr, p);
-				
+				if (f.expr != null)				
+					resolveComplexTypesInExpr(f.expr, p);				
+	
 				FFun(f);
 		}
 		
@@ -291,8 +352,9 @@ class Mixin
 				switch (e.expr)
 				{
 					
-					case ENew(t, p):
-						var ct = Context.typeof(e).toComplexType();					
+					case ENew(t, p):					
+						
+						var ct = Context.typeof(e).toComplexType();											
 						e.expr = ENew(ct.extractTypePath(), p);
 					case EField(e, f) if (f == "new"):							
 						e.expr = Context.parse(e.resolveClassName(), pos).expr;
@@ -309,7 +371,7 @@ class Mixin
 					case EConst(CIdent(s)):
 						if (s.isValidClassName() && localVars.indexOf(s) == -1)
 						{							
-							e.expr = Context.parse(e.resolveClassName(), pos).expr;
+							e.expr = Context.parse(e.resolveClassName(), e.pos).expr;
 						}
 					case _:
 						
@@ -318,15 +380,21 @@ class Mixin
 				
 				e.iter(iterate);
 			} catch (exception:Dynamic)
-			{
-				trace(e.expr);
+			{				
+				//do not break completion
+				#if !display
+				//trace(e.expr);
+				//trace(expr.toString());
 				Context.fatalError(Std.string(exception), e.pos);
+				#end
 			}
 			
 			
 		}
 		
 		iterate(expr);
+		
+		//trace(expr.toString());
 	}
 	
 	/**

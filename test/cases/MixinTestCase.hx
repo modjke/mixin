@@ -15,13 +15,11 @@ class MixinTestCase extends TestCase
 		assertEquals(o.baseProp, "overwritten base property");
 		var i = cast(o, Mixin);
 		assertEquals(i.baseProp, "overwritten base property");		
-		
-		o.getValue();
 	}
 	
 }
 
-class Object implements Mixin implements SampleMixin
+class Object implements Mixin
 {
 	public var baseProp(get, never):String;
 	function get_baseProp():String return "base property";

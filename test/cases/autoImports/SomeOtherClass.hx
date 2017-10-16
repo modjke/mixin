@@ -1,4 +1,4 @@
-package cases.other;
+package cases.autoImports;
 
 typedef SOC<T> = SomeOtherClass<T>;
 
