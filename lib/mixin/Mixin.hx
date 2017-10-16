@@ -284,45 +284,49 @@ class Mixin
 	static function resolveComplexTypesInExpr(expr:Expr, pos:Position)
 	{
 		var localVars:Array<String> = [];
+	
 		function iterate(e:Expr)
 		{
-			
-			
-			switch (e.expr)
+			try {
+				switch (e.expr)
+				{
+					
+					case ENew(t, p):
+						var ct = Context.typeof(e).toComplexType();					
+						e.expr = ENew(ct.extractTypePath(), p);
+					case EField(e, f) if (f == "new"):							
+						e.expr = Context.parse(e.resolveClassName(), pos).expr;
+						// do not iterate
+						return;
+						
+					case EVars(vars):
+						for (v in vars)
+						{
+							localVars.push(v.name);
+							v.type = v.type.resolveComplextType(pos);
+						}
+						
+					case EConst(CIdent(s)):
+						if (s.isValidClassName() && localVars.indexOf(s) == -1)
+						{							
+							e.expr = Context.parse(e.resolveClassName(), pos).expr;
+						}
+					case _:
+						
+						
+				}
+				
+				e.iter(iterate);
+			} catch (exception:Dynamic)
 			{
-				
-				case ENew(t, p):
-					var ct = ComplexType.TPath(t).resolveComplextType(pos);					
-					e.expr = ENew(ct.extractTypePath(), p);
-				case EField(e, f) if (f == "new"):	
-					var ct = e.exprToComplexType(pos).resolveComplextType(pos);
-					e = Context.parse(ct.toString() + ".new", pos);										
-				case EVars(vars):
-					for (v in vars)
-					{
-						localVars.push(v.name);
-						v.type = v.type.resolveComplextType(pos);
-					}
-				
-				case EConst(CIdent(s)):
-					if (s.isValidClassName() && localVars.indexOf(s) == -1)
-					{
-						var ct = ComplexType.TPath({
-							pack: [],
-							name: s
-						}).resolveComplextType(pos);
-						e.expr = Context.parse(ct.toString(), pos).expr;
-					}
-				case _:
-					
-					
+				trace(e.expr);
+				Context.fatalError(Std.string(exception), e.pos);
 			}
-			e.iter(iterate);
 			
 			
 		}
 		
-		trace(expr.toString());
+		iterate(expr);
 	}
 	
 	/**

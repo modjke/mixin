@@ -1,12 +1,12 @@
 package cases.other;
 
-typedef SOC = SomeOtherClass;
+typedef SOC<T> = SomeOtherClass<T>;
 
-class SomeOtherClass 
+class SomeOtherClass<T> 
 {
-	var value:Int;	
+	var value:T;
 	
-	public function new(value:Int) 
+	public function new(value:T) 
 	{
 		this.value = value;
 	}

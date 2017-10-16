@@ -2,6 +2,12 @@ git:
     depth: 1
 
 language: haxe
+
+notifications:
+  email:
+    on_success: never
+    on_failure: never
+	
 haxe:
   - "3.4.4"
   

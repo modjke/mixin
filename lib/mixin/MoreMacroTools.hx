@@ -27,6 +27,18 @@ class MoreMacroTools
 	}
 	
 	
+	public static function resolveClassName(e:Expr):String
+	{
+		var cls = Context.typeof(e).toComplexType().toString();
+		// in case of Class<...>
+		var re = ~/Class<(\S+)>/;
+		if (re.match(cls))
+			cls = re.matched(1);
+			
+		return cls;
+	}
+	
+	
 	public static function isValidClassName(s:String):Bool
 	{
 		return ~/\b[A-Z][_,A-Z,a-z,0-9]*/.match(s);
