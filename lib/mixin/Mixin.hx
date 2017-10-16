@@ -93,6 +93,9 @@ class Mixin
 				interfaceFields.push(makeInterfaceField(field));
 		}
 		
+		for (field in buildFields)
+			resolveComplexTypesInFieldExpr(field, buildFields);
+		
 		
 		if (!mixins.exists(mixinFql))
 			mixins.set(mixinFql, {
@@ -125,8 +128,8 @@ class Mixin
 		{
 			//mf - mixin field
 			//cf - existing class field (can be null)
+		
 			var cf = fields.find(function (f) return f.name == mf.name);
-			
 			
 			switch (getFieldMixinType(mf))
 			{
@@ -194,7 +197,7 @@ class Mixin
 			{
 				case FVar(t, e):
 					if (t == null) {
-						t = magicTypeOf(e, false);						
+						t = simpleTypeOf(e);						
 						
 						if (t != null)
 							f.kind = FVar(t, e);
@@ -203,61 +206,30 @@ class Mixin
 					}
 				case FProp(get, set, t, e):
 					if (t == null) {
-						t = magicTypeOf(e, false);						
+						t = simpleTypeOf(e);						
 						
 						if (t != null)
 							f.kind = FProp(get, set, t, e);
 						else
-							Context.fatalError('Mixin requires vars to be explicitly typed', f.pos);						
+							Context.fatalError('Mixin requires properties to be explicitly typed', f.pos);						
 					}
 				case FFun(func):
 					if (func.ret == null)
 					{
-						
-						var ret = magicTypeOf(func.expr, true);
-						
-						if (ret != null)
-							func.ret = ret;
-						else
-							Context.fatalError('Mixin requires methods to be explicitly typed', f.pos);
+						Context.fatalError('Mixin requires methods to be explicitly typed', f.pos);
 					}
 			}
 		}
 		
 	}
 	
-	static function magicTypeOf(expr:Expr, func:Bool = false):Null<ComplexType>
+	static function simpleTypeOf(expr:Expr):Null<ComplexType>
 	{
-		if (expr == null) return func ? (macro:Void) : null;
-			
-		if (func)
-		{
-			var out:ComplexType = null;
-			function lookForReturn(e:Expr)
-			{
-				if (out != null)
-					switch (e.expr)
-					{
-						case EReturn(e):						
-							try {
-								out = e != null ? Context.typeof(e).toComplexType() : null;
-							} catch (any:Dynamic) {}
-						case _: 
-							e.iter(lookForReturn);
-					}
-			}
-			
-			lookForReturn(expr);
-			
-			return out != null ? out : macro:Void;
-		} else 
-			try {			
-				return Context.typeof(expr).toComplexType();
-			} catch (ignore:Dynamic) {
-				return null;
-			}
-		
-		
+		try {			
+			return Context.typeof(expr).toComplexType();
+		} catch (ignore:Dynamic) {
+			return null;
+		}
 	}
 	
 	static function makeSureFieldCanBeBase(f:Field)
@@ -332,69 +304,94 @@ class Mixin
 			case FFun(f):			
 				for (a in f.args) a.type = a.type.resolveComplextType(p);
 				f.ret = f.ret.resolveComplextType(p);
-				
-				if (f.expr != null)				
-					resolveComplexTypesInExpr(f.expr, p);				
-	
 				FFun(f);
 		}
 		
 	}
 	
-	// SOME HACKERY LEVEL SHIT RIGHT HERE
-	static function resolveComplexTypesInExpr(expr:Expr, pos:Position)
-	{
-		var localVars:Array<String> = [];
 	
-		function iterate(e:Expr)
+	// SOME HACKERY LEVEL SHIT RIGHT HERE
+	static function resolveComplexTypesInFieldExpr(field:Field, otherFields:Array<Field>)
+	{
+		var expr:Expr = null;		
+		var pos:Position = field.pos;
+		
+		var typeStack = new TypeStack();
+		typeStack.pushLevel(TypeStack.levelFromFields(otherFields));
+		
+		switch (field.kind)
 		{
-			try {
-				switch (e.expr)
-				{
-					
-					case ENew(t, p):					
-						
-						var ct = Context.typeof(e).toComplexType();											
-						e.expr = ENew(ct.extractTypePath(), p);
-					case EField(e, f) if (f == "new"):							
-						e.expr = Context.parse(e.resolveClassName(), pos).expr;
-						// do not iterate
-						return;
-						
-					case EVars(vars):
-						for (v in vars)
-						{
-							localVars.push(v.name);
-							v.type = v.type.resolveComplextType(pos);
-						}
-						
-					case EConst(CIdent(s)):
-						if (s.isValidClassName() && localVars.indexOf(s) == -1)
-						{							
-							e.expr = Context.parse(e.resolveClassName(), e.pos).expr;
-						}
-					case _:
-						
-						
-				}
-				
-				e.iter(iterate);
-			} catch (exception:Dynamic)
-			{				
-				//do not break completion
-				#if !display
-				//trace(e.expr);
-				//trace(expr.toString());
-				Context.fatalError(Std.string(exception), e.pos);
-				#end
-			}
-			
-			
+			case FVar(t, e): 
+				expr = e;
+			case FProp(get, set, t, e):
+				expr = e;
+			case FFun(f):
+				expr = f.expr;
+				if (f.args != null)
+					typeStack.pushLevel(TypeStack.levelFromArgs(f.args));
 		}
 		
-		iterate(expr);
+		if (expr != null)
+		{
+			function iterate(e:Expr)
+			{
+				try {
+					var block:Bool = false;
+					
+					switch (e.expr)
+					{
+						case EBlock(_):
+							block = true;
+							
+						case ENew(t, p):					
+							
+							var ct = Context.typeof(typeStack.wrap(e)).toComplexType();											
+							e.expr = ENew(ct.extractTypePath(), p);
+							
+						case EField(e, f) if (f == "new"):							
+							e.expr = Context.parse(e.resolveClassName(), pos).expr;
+							// skip
+							return;
+							
+						case EVars(vars):
+							for (v in vars)
+							{								
+								v.type = v.type.resolveComplextType(pos);
+								typeStack.addVar(v.name, v.type);
+							}
+							
+							
+						case EConst(CIdent(s)):
+							if (s.isValidClassName() && !typeStack.hasIdentifier(s))
+							{							
+								e.expr = Context.parse(e.resolveClassName(), e.pos).expr;
+							}
+						case _:
+							
+							
+					}
+					
+					if (block) typeStack.pushLevel();
+					e.iter(iterate);
+					if (block) typeStack.popLevel();
+				} catch (exception:Dynamic)
+				{				
+					//do not break completion
+					#if !display
+					//trace(e.expr);
+					//trace(expr.toString());
+					Context.fatalError(Std.string(exception), e.pos);
+					#end
+				}
+				
+				
+			}
+			
+			iterate(expr);
+		}
 		
-		//trace(expr.toString());
+		
+
 	}
 	
 	/**
@@ -596,10 +593,10 @@ class Mixin
 	{		
 		if (interf == null) 
 			throw 'Interface field should not be null';
-		
+
 		if (field != null && 
 			interf.name == field.name && 
-			Same.access(interf.access, field.access))
+			Same.access(interf.access, field.access, [AOverride]))
 		{
 			var ap = interf.pos;
 			var bp = field.pos;

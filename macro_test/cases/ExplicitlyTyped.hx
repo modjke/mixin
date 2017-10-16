@@ -17,19 +17,19 @@ class ExplicitlyTyped implements Mixin
 @mixin interface Mixin 
 {
 	#if test1
-	var variable = 0.0;
+	var variable;
 	#end
 	
 	#if test2
-	var prop(default, null) = 0.0;
+	var prop(default, null);
 	#end
 	
 	#if test3
-	function method()
-	{
-		return 0.0;
+	function method() {
+		return null;
 	}
 	#end
+	
 	
 	//no type for constructor
 	@overwrite public function new()

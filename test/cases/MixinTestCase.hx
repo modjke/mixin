@@ -31,6 +31,11 @@ class Object implements Mixin
 	{
 		
 	}
+	
+	function overwriteMethod():Void
+	{
+		
+	}
 
 	public function new()
 	{

@@ -37,9 +37,11 @@ class Same
 			   arraysOfExpr(a.params, b.params);
 	}
 	
-	static function access(a:Array<Access>, b:Array<Access>)
+	static function access(a:Array<Access>, b:Array<Access>, ignore:Array<Access>)
 	{
-		return arrays(a, b, function(a, b)
+		var ac = a.copy().filter(function (a) return ignore.indexOf(a) == -1);
+		var bc = b.copy().filter(function (a) return ignore.indexOf(a) == -1);
+		return arrays(ac, bc, function(a, b)
 		{
 			return a.equals(b);
 		});

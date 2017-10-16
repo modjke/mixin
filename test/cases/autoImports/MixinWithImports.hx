@@ -1,11 +1,12 @@
 package cases.autoImports;
+import haxe.PosInfos;
 
 @mixin interface MixinWithImports 
 {
 
 	var field:SomeOtherClass<Int>;
 	
-	@base public function assertTrue(expr:Bool):Void;
+	@base function assertTrue(b:Bool, ?c:PosInfos):Void;
 	
 	@overwrite public function new()
 	{
@@ -14,31 +15,44 @@ package cases.autoImports;
 		field = new SomeOtherClass(0);
 	}
 	
-	public function testCreateOtherClass()
+	public function testCreateOtherClass():Void
 	{
 		var o = new SomeOtherClass(5);
 		
 		assertTrue(o.getValue() == 5);
 	}
 	
-	public function testFactory()
+	public function testFactory():Void
 	{
 		var factory = SomeOtherClass.new;
-		assertTrue(factory(5));
+		assertTrue(factory(5).getValue() == 5);
 	}
-	
-	public function getValueFromLocalVar(v:Int):Int
+		
+	public function testValueFromLocalVar():Void
 	{
 		var some:SomeOtherClass<Int>;
+		var v:Int = 5;
 		some = new SomeOtherClass(v);
-		return some.getValue();
+		assertTrue(some.getValue() == v);
+	}
+	
+	var vField:Int;
+	public function testValueFromField():Void
+	{
+		vField = 5;
+		var some = new SomeOtherClass(vField);
+		assertTrue(vField == some.getValue());
+	}
+	
+	public function testValueFromArg(v:Int):Void
+	{
+		assertTrue(new SomeOtherClass(v).getValue() == v);
 	}
 	
 	public function checkTyping():Bool
 	{		
 		return  Type.getClassName(SomeOtherClass) == "cases.autoImports.SomeOtherClass" &&
-				Type.getClassName(cases.autoImports.SomeOtherClass) == "cases.autoImports.SomeOtherClass" &&
-				Type.getClass(field) == "cases.autoImports.SomeOtherClass";
+				Type.getClassName(cases.autoImports.SomeOtherClass) == "cases.autoImports.SomeOtherClass";
 		
 	}
 	

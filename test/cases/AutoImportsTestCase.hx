@@ -1,5 +1,6 @@
 package cases;
 import cases.autoImports.MixinWithImports;
+import haxe.PosInfos;
 import haxe.unit.TestCase;
 
 class AutoImportsTestCase extends TestCase implements MixinWithImports
@@ -9,7 +10,12 @@ class AutoImportsTestCase extends TestCase implements MixinWithImports
 	 */
 	public function new()
 	{
-		
+		super();
+	}
+	
+	override function assertTrue(b:Bool, ?c:PosInfos):Void 
+	{
+		super.assertTrue(b, c);
 	}
 }
 
