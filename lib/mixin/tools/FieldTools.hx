@@ -29,6 +29,15 @@ class FieldTools
 		return f.name == "new";
 	}
 	
+	public static function extractFFunFunction(f:Field):Function
+	{
+		return switch (f.kind)
+		{
+			case FFun(f): f;
+			case _: throw 'Not a FFun field';			
+		}
+	}
+	
 	public static function setExpr(f:Field, e:Expr)
 	{
 		f.kind = switch (f.kind)

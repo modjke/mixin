@@ -8,18 +8,19 @@ import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
-import mixin.tools.Same;
-import mixin.tools.TypeStack;
-import mixin.tools.Typer;
+import mixin.same.Same;
+import mixin.typer.TypeStack;
+import mixin.typer.Typer;
 
 using haxe.macro.Tools;
 using mixin.tools.MoreMacroTools;
 using mixin.tools.MoreComplexTypeTools;
 using mixin.tools.FieldTools;
+using mixin.tools.MetadataTools;
 
-using haxe.EnumTools;
 using StringTools;
 using Lambda;
+
 
 enum FieldMixinType
 {
@@ -144,6 +145,18 @@ class Mixin
 		
 			var cf = fields.find(function (f) return f.name == mf.name);
 			
+			#if display
+			
+			switch (getFieldMixinType(mf))
+			{
+				case MIXIN | OVERWRITE:
+					if (cf == null)
+						fields.push(mf);
+				
+				case _:
+			}
+			#else 
+			
 			switch (getFieldMixinType(mf))
 			{
 				case MIXIN:
@@ -189,6 +202,8 @@ class Mixin
 					
 					fields.push(mf);
 			}
+			
+			#end
 		}
 		
 		return fields;
@@ -241,9 +256,9 @@ class Mixin
 	
 	static function getFieldMixinType(f:Field):FieldMixinType
 	{		
-		var mixin = hasMetaWithName(f.meta, "mixin");
-		var base = hasMetaWithName(f.meta, "base");
-		var ow = hasMetaWithName(f.meta, "overwrite");		
+		var mixin = f.meta.hasMetaWithName("mixin");
+		var base = f.meta.hasMetaWithName("base");
+		var ow = f.meta.hasMetaWithName("overwrite");		
 	
 		return switch [mixin, base, ow]
 		{
@@ -291,7 +306,7 @@ class Mixin
 		};		
 		
 		
-		var mfunc = extractFFunFunction(mf);		
+		var mfunc = mf.extractFFunFunction();	
 		searchAndReplace(mfunc.expr);
 	}
 	
@@ -332,8 +347,8 @@ class Mixin
 	
 	static function injectBaseConstructor(mf:Field, cf:Field)
 	{
-		var mfunc = extractFFunFunction(mf);	
-		var injectExpr = extractFFunFunction(cf).expr;	//should be a block
+		var mfunc = mf.extractFFunFunction();	
+		var injectExpr = cf.extractFFunFunction().expr;	//should be a block
 		
 		function searchForReturn(e:Expr)
 		{
@@ -385,7 +400,7 @@ class Mixin
 			{
 				if (mf.meta == null) mf.meta = [];
 				
-				var dm = getMetaWithName(mf.meta, m.name);
+				var dm = mf.meta.getMetaWithName(m.name);
 
 				if (dm != null)
 				{
@@ -406,24 +421,7 @@ class Mixin
 		return ct.module.endsWith("." + ct.name) ? ct.module : ct.module + "." + ct.name;
 	}
 	
-	static function hasMetaWithName(meta:Metadata, name:String):Bool
-	{
-		return meta.exists(function (e) return e.name == name);
-	}
-	
-	static function getMetaWithName(meta:Metadata, name:String):MetadataEntry
-	{
-		return meta.find(function (e) return e.name == name);
-	}
 	
 	
 	
-	static function extractFFunFunction(f:Field):Function
-	{
-		return switch (f.kind)
-		{
-			case FFun(f): f;
-			case _: throw 'Not a FFun field';			
-		}
-	}
 }

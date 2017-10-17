@@ -1,7 +1,8 @@
-package mixin.tools;
+package mixin.typer;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Field;
+import mixin.same.Same;
 
 using haxe.macro.Tools;
 using mixin.tools.MoreComplexTypeTools;

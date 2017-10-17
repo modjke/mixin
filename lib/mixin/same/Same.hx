@@ -1,4 +1,4 @@
-package mixin.tools;
+package mixin.same;
 import haxe.macro.ComplexTypeTools;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Access;

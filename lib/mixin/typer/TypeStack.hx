@@ -1,4 +1,4 @@
-package mixin.tools;
+package mixin.typer;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.ComplexType;
