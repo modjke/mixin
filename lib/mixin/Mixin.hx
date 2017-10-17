@@ -8,9 +8,14 @@ import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
+import mixin.tools.Same;
+import mixin.tools.TypeStack;
+import mixin.tools.Typer;
 
 using haxe.macro.Tools;
-using mixin.MoreMacroTools;
+using mixin.tools.MoreMacroTools;
+using mixin.tools.MoreComplexTypeTools;
+using mixin.tools.FieldTools;
 
 using haxe.EnumTools;
 using StringTools;
@@ -66,35 +71,43 @@ class Mixin
 		
 		for (field in buildFields)
 		{				
-			var isConstructor = field.name == "new";	
-			var isPublic = field.access.has(APublic);
+			#if display
 			
-			makeSureFieldIsExplicitlyTyped(field);
+			Typer.prepareForDisplay(field);
+			Typer.resolveComplexTypesInField(field);
 			
-			resolveComplexTypesInField(field);
+			#else
+
+			Typer.makeFieldTypeDeterminable(field);
+			Typer.resolveComplexTypesInField(field);			
 			
 			switch (getFieldMixinType(field))
 			{	
 				case MIXIN:
-					if (isConstructor) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
+					if (field.isConstructor()) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
 						
 					makeSureFieldCanBeMixin(field, buildFields);
 				case BASE:
-					if (isConstructor) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
+					if (field.isConstructor()) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
 					
 					makeSureFieldCanBeBase(field);
 				case OVERWRITE:	
 					makeSureFieldCanBeOverwrite(field);
 				
 			}
+			#end
 			
 			mixinFields.push(field);			
-			if (isPublic && !isConstructor)
-				interfaceFields.push(makeInterfaceField(field));
+			if (field.isPublic() && !field.isConstructor())
+				interfaceFields.push(field.makeInterfaceField());
 		}
 		
+		#if !display
+		
 		for (field in buildFields)
-			resolveComplexTypesInFieldExpr(field, buildFields);
+			Typer.resolveComplexTypesInFieldExpr(field, buildFields);
+			
+		#end
 		
 		
 		if (!mixins.exists(mixinFql))
@@ -141,24 +154,23 @@ class Mixin
 				case BASE:
 					if (cf != null)
 					{
-						makeSureFieldIsExplicitlyTyped(cf);
-						
-						if (!satisfiesInterface(mf, cf))
+						//if mixin field is public there is no need to check interface
+						//haxe will check it for us
+						//we have to check only private @:base fields
+						if (mf.isPrivate() && !Typer.satisfiesInterface(mf, cf))
 						{
 							Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
 							Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
-						}
+						}						
 					} else 
 						Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
 				case OVERWRITE:
 					if (cf != null)
 					{
-						makeSureFieldIsExplicitlyTyped(cf);
-						
-						if (satisfiesInterface(mf, cf))
+						if (Typer.satisfiesInterface(mf, cf))
 						{
-							var isConstructor = cf.name == "new";
-							if (isConstructor) {
+							
+							if (cf.isConstructor()) {
 								
 								injectBaseConstructor(mf, cf);
 								fields.remove(cf);
@@ -179,59 +191,12 @@ class Mixin
 			}
 		}
 		
-		
-	
-
 		return fields;
 	}
 		
-	static function makeSureFieldIsExplicitlyTyped(f:Field)
-	{
-		
-		var isConstructor = f.name == "new";
-		//skips constructor
-		if (!isConstructor)
-		{
-			
-			switch (f.kind)
-			{
-				case FVar(t, e):
-					if (t == null) {
-						t = simpleTypeOf(e);						
-						
-						if (t != null)
-							f.kind = FVar(t, e);
-						else
-							Context.fatalError('Mixin requires vars to be explicitly typed', f.pos);						
-					}
-				case FProp(get, set, t, e):
-					if (t == null) {
-						t = simpleTypeOf(e);						
-						
-						if (t != null)
-							f.kind = FProp(get, set, t, e);
-						else
-							Context.fatalError('Mixin requires properties to be explicitly typed', f.pos);						
-					}
-				case FFun(func):
-					if (func.ret == null)
-					{
-						Context.fatalError('Mixin requires methods to be explicitly typed', f.pos);
-					}
-			}
-		}
-		
-	}
 	
-	static function simpleTypeOf(expr:Expr):Null<ComplexType>
-	{
-		try {			
-			return Context.typeof(expr).toComplexType();
-		} catch (ignore:Dynamic) {
-			return null;
-		}
-	}
 	
+
 	static function makeSureFieldCanBeBase(f:Field)
 	{
 		switch (f.kind)
@@ -291,141 +256,9 @@ class Mixin
 		}
 	}
 	
-	static function resolveComplexTypesInField(field:Field)
-	{
-		
-		var p = field.pos;
-		field.kind = switch (field.kind)
-		{
-			case FVar(t, e): 
-				FVar(t.resolveComplextType(p), e);				
-			case FProp(get, set, t, e):
-				FProp(get, set, t.resolveComplextType(p), e);
-			case FFun(f):			
-				for (a in f.args) a.type = a.type.resolveComplextType(p);
-				f.ret = f.ret.resolveComplextType(p);
-				FFun(f);
-		}
-		
-	}
 	
 	
-	// SOME HACKERY LEVEL SHIT RIGHT HERE
-	static function resolveComplexTypesInFieldExpr(field:Field, otherFields:Array<Field>)
-	{
-		var expr:Expr = null;		
-		var pos:Position = field.pos;
-		
-		var typeStack = new TypeStack();
-		typeStack.pushLevel(TypeStack.levelFromFields(otherFields));
-		
-		switch (field.kind)
-		{
-			case FVar(t, e): 
-				expr = e;
-			case FProp(get, set, t, e):
-				expr = e;
-			case FFun(f):
-				expr = f.expr;
-				if (f.args != null)
-					typeStack.pushLevel(TypeStack.levelFromArgs(f.args));
-		}
-		
-		if (expr != null)
-		{
-			function iterate(e:Expr)
-			{
-				try {
-					var block:Bool = false;
-					
-					switch (e.expr)
-					{
-						case EBlock(_):
-							block = true;
-							
-						case ENew(t, p):					
-							
-							var ct = Context.typeof(typeStack.wrap(e)).toComplexType();											
-							e.expr = ENew(ct.extractTypePath(), p);
-							
-						case EField(e, f) if (f == "new"):							
-							e.expr = Context.parse(e.resolveClassName(), pos).expr;
-							// skip
-							return;
-							
-						case EVars(vars):
-							for (v in vars)
-							{								
-								v.type = v.type.resolveComplextType(pos);
-								typeStack.addVar(v.name, v.type);
-							}
-							
-							
-						case EConst(CIdent(s)):
-							if (s.isValidClassName() && !typeStack.hasIdentifier(s))
-							{							
-								e.expr = Context.parse(e.resolveClassName(), e.pos).expr;
-							}
-						case _:
-							
-							
-					}
-					
-					if (block) typeStack.pushLevel();
-					e.iter(iterate);
-					if (block) typeStack.popLevel();
-				} catch (exception:Dynamic)
-				{				
-					//do not break completion
-					#if !display
-					//trace(e.expr);
-					//trace(expr.toString());
-					Context.fatalError(Std.string(exception), e.pos);
-					#end
-				}
-				
-				
-			}
-			
-			iterate(expr);
-		}
-		
-		
-
-	}
 	
-	/**
-	 * Removes access, initial values, FFun exprs and 
-	 * returns new valid interface field
-	 * 
-	 * @param	f
-	 * @return
-	 */
-	static function makeInterfaceField(f:Field):Field
-	{
-		
-		var out:Field = {
-			name: f.name,
-			access: [],
-			kind: switch (f.kind)
-			{
-				case FVar(t, e): FVar(t, null);
-				case FFun(f): 
-					FFun({
-						args: f.args,
-						ret: f.ret,
-						params: f.params,
-						expr: null
-					});
-				case FProp(get, set, t, e): FProp(get, set, t, null);
-			},
-			doc: f.doc,
-			meta: f.meta,
-			pos: f.pos			
-		};
-		
-		return out;
-	}
 		
 	/**
 	 * Renames old (cf) method to mixinFql + _ + cf.name
@@ -583,49 +416,7 @@ class Mixin
 		return meta.find(function (e) return e.name == name);
 	}
 	
-	/**
-	 * Checks if field satisfies interface/mixin (interf) field
-	 * @param	interf mixin field
-	 * @param	field can be null, false returned
-	 * @return 	true if satisfies
-	 */
-	static function satisfiesInterface(interf:Field, field:Null<Field>):Bool
-	{		
-		if (interf == null) 
-			throw 'Interface field should not be null';
-
-		if (field != null && 
-			interf.name == field.name && 
-			Same.access(interf.access, field.access, [AOverride]))
-		{
-			var ap = interf.pos;
-			var bp = field.pos;
-			return switch ([interf.kind,field.kind])
-			{
-				case [FFun(af), FFun(bf)]:
-
-					Same.functionArgs(af.args, bf.args, ap, bp) &&
-					Same.complexTypes(af.ret, bf.ret, ap, bp) &&
-					Same.typeParamDecls(af.params, bf.params);												
-					
-				case [FProp(ag, as, at, ae), FProp(bg, bs, bt, be)]:
-					
-					ag == bg &&
-					as == bs &&
-					Same.complexTypes(at, bt, ap, bp);
-						
-				case [FVar(at, ae), FVar(bt, be)]:
-				
-					Same.complexTypes(at, bt, ap, bp);
-					
-				case _:		
-					
-					false;
-			}			
-		}
-		
-		return false;
-	}
+	
 	
 	static function extractFFunFunction(f:Field):Function
 	{

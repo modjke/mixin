@@ -1,6 +1,6 @@
 //-test1-/Field <field> does not satisfy @base mixin interface/
 //-test2-/Field <method> does not satisfy @base mixin interface/
-//-test3-/Field <method> does not satisfy @base mixin interface/
+//-test3-/Field method should be public as requested by cases\.Mixin/
 package cases;
 
 class BaseFieldSatisfaction implements Mixin

@@ -1,4 +1,4 @@
-package mixin;
+package mixin.tools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.ComplexType;
@@ -44,27 +44,9 @@ class MoreMacroTools
 		return ~/\b[A-Z][_,A-Z,a-z,0-9]*/.match(s);
 	}
 	
-	public static function resolveComplextType(t:ComplexType, p:Position):ComplexType
-	{
-		if (t == null) return null;
-		
-		var out = Context.resolveType(t, p).toComplexType();
-		//trace(safeToString(t) + " =>> " + safeToString(t));
-		return out;
-	}	
+
 	
-	public static function safeToString(?t:ComplexType)
-	{
-		return t != null ? t.toString() : "null";
-	}
 	
-	public static function extractTypePath(t:ComplexType):TypePath
-	{
-		return switch (t)
-		{
-			case TPath(tp): tp;
-			case _: 
-				throw 'Failed to extract TypePath from ${safeToString(t)}';
-		}
-	}
+	
+	
 }

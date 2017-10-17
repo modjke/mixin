@@ -14,7 +14,7 @@ class AutoImportsTestCase extends TestCase implements MixinWithImports
 	}
 	
 	override function assertTrue(b:Bool, ?c:PosInfos):Void 
-	{
+	{				
 		super.assertTrue(b, c);
 	}
 }

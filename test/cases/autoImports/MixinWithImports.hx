@@ -49,10 +49,10 @@ import haxe.PosInfos;
 		assertTrue(new SomeOtherClass(v).getValue() == v);
 	}
 	
-	public function checkTyping():Bool
+	public function testTyping():Void
 	{		
-		return  Type.getClassName(SomeOtherClass) == "cases.autoImports.SomeOtherClass" &&
-				Type.getClassName(cases.autoImports.SomeOtherClass) == "cases.autoImports.SomeOtherClass";
+		assertTrue(Type.getClassName(SomeOtherClass) == "cases.autoImports.SomeOtherClass");
+		assertTrue(Type.getClassName(cases.autoImports.SomeOtherClass) == "cases.autoImports.SomeOtherClass");
 		
 	}
 	

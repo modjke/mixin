@@ -1,4 +1,4 @@
-package mixin;
+package mixin.tools;
 import haxe.macro.ComplexTypeTools;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Access;
@@ -9,7 +9,8 @@ import haxe.macro.Expr.TypeParam;
 import haxe.macro.Expr.TypeParamDecl;
 
 using haxe.macro.Tools;
-using mixin.MoreMacroTools;
+using mixin.tools.MoreMacroTools;
+using mixin.tools.MoreComplexTypeTools;
 
 @:publicFields
 class Same 
@@ -70,8 +71,8 @@ class Same
 	static function complexTypes(a:ComplexType, b:ComplexType, apos:Position, bpos:Position)
 	{		
 		//TODO: find a better way
-		return  a.resolveComplextType(apos).safeToString() == 
-				b.resolveComplextType(bpos).safeToString();
+		return  a.resolve(apos).safeToString() == 
+				b.resolve(bpos).safeToString();
 	}
 	
 	static function exprs(?a:Expr, ?b:Expr)
