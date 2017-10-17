@@ -7,10 +7,10 @@ notifications:
   email:
     on_success: never
     on_failure: never
-	
+
 haxe:
   - "3.4.4"
-  
+
 script:
- - haxe macro-test-runner.hxml && neko macro_test/test_runner.n
- - haxe test.hxml
+  - haxe macro-test-runner.hxml && neko macro_test/test_runner.n
+  - haxe test.hxml
