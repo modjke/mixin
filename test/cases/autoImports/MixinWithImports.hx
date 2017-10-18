@@ -1,12 +1,18 @@
 package cases.autoImports;
 import haxe.PosInfos;
 
+enum SomeEnum
+{
+	ONE(v:Int);
+	TWO(v:Int);
+}
 @mixin interface MixinWithImports 
 {
 
 	var field:SomeOtherClass<Int>;
 	
 	@base function assertTrue(b:Bool, ?c:PosInfos):Void;
+	//@base function assertEquals<T>(expected:T, actual:T, ?c:PosInfos):Void;
 	
 	@overwrite public function new()
 	{
@@ -54,6 +60,19 @@ import haxe.PosInfos;
 		assertTrue(Type.getClassName(SomeOtherClass) == "cases.autoImports.SomeOtherClass");
 		assertTrue(Type.getClassName(cases.autoImports.SomeOtherClass) == "cases.autoImports.SomeOtherClass");
 		
+	}
+	
+	public function testSwitch():Void
+	{
+		
+		/*
+		var someEnum:SomeEnum = ONE(5);
+		assertEquals(5, switch (someEnum)
+		{
+			case ONE(v): new SomeOtherClass(v).getValue();
+			case TWO(v): new SomeOtherClass(v).getValue();
+		});
+		*/
 	}
 	
 	@mixin public function getValue():Int

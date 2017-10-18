@@ -43,7 +43,7 @@ class Mixin
 		var lc = lcRef != null ? lcRef.get() : null;		
 		var isMixin = lc != null && lc.meta.has("mixin");
 		
-		return isMixin ? createMixin() : Context.getBuildFields();
+		return isMixin ? createMixin() : null;
 	}
 	
 	/**
