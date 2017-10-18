@@ -14,50 +14,51 @@ class OverwriteCase extends TestCase
 	{
 		var h = new ValueHolder(0);
 		var val = h.value;
-		assertTrue(val == 0);
-		assertTrue(h.getValueCalls == 1);
+		assertEquals(0, val);
+		assertEquals(1, h.getValueCalls);
 	}
 	
 	public function testPropertySetterOverwrite()
 	{
 		var h = new ValueHolder(0);		
 		h.value = 5;
-		assertTrue(h.value == 5);
-		assertTrue(h.setValueCalls == 1);
+		assertEquals(5, h.value);
+		assertEquals(1, h.setValueCalls);
 	}
 	
 	public function testMethodOverwrite()
 	{
 		var h = new ValueHolder(0);
 		h.callIncrementValue(5);
-		assertTrue(h.value == 5);
-		assertTrue(h.incrementValueCalls == 5);
+		assertEquals(5,h.value);
+		assertEquals(5,h.incrementValueCalls);
 	}
 }
 
 class ValueHolder implements ValueHolderMixin
 {
-	@:isVar
+	var _value:Int;
 	public var value(get, set):Int;
 	
 	function get_value():Int
 	{
-		return value;
+		return _value;
 	}
 	
 	function set_value(v:Int):Int
 	{
-		return value = v;
+	
+		return _value = v;
 	}
 	
 	public function new(value:Int)
 	{
-		this.value = value;
+		this._value = value;
 	}
 	
 	public function incrementValue():Void
 	{
-		this.value++;
+		this._value += 1;
 	}
 }
 
@@ -70,18 +71,21 @@ class ValueHolder implements ValueHolderMixin
 	@overwrite 
 	function get_value():Int
 	{
+		getValueCalls++;
 		return base.get_value();
 	}
 	
 	@overwrite
 	function set_value(v:Int):Int
-	{
+	{		
+		setValueCalls++;
 		return base.set_value(v);
 	}
 	
 	@overwrite
 	public function incrementValue():Void
 	{
+		incrementValueCalls++;
 		base.incrementValue();		
 	}
 	

@@ -9,7 +9,7 @@ class FieldTools
 	{
 		return switch (f.kind)
 		{
-			case FVar(_, _): true;
+			case FFun(_): true;
 			case _: false;
 		}
 	}
@@ -34,6 +34,15 @@ class FieldTools
 		return switch (f.kind)
 		{
 			case FFun(f): f;
+			case _: throw 'Not a FFun field';			
+		}
+	}
+	
+	public static function replaceFFunFunction(f:Field, func:Function)
+	{
+		f.kind = switch (f.kind)
+		{
+			case FFun(_): FFun(func);
 			case _: throw 'Not a FFun field';			
 		}
 	}

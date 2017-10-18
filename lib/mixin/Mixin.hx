@@ -180,14 +180,12 @@ class Mixin
 				case OVERWRITE:
 					if (cf != null)
 					{
+						assertFieldIsNotGetSetForIsVarProperty(cf, fields);
+						
 						if (Typer.satisfiesInterface(mf, cf))
 						{
-							
-							if (cf.isConstructor()) {
-								
-								injectBaseConstructor(mf, cf);
-								fields.remove(cf);
-							}
+							if (cf.isConstructor())
+								overwriteConstructor(mf, cf);
 							else
 								overwriteMethod(mixinFql, mf, cf);
 						} else 
@@ -197,10 +195,12 @@ class Mixin
 						}
 						
 					} else {								
-						Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);
+						fields.push(mf);
+						
+						Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);						
 					}
 					
-					fields.push(mf);
+					
 			}
 			
 			#end
@@ -275,11 +275,11 @@ class Mixin
 	
 	
 		
+
 	/**
-	 * Renames old (cf) method to mixinFql + _ + cf.name
-	 * Adding mixin fully qualified class name (mixinFql) avoids conflicts when more than one mixin overwrites method //fix my english :(
-	 * Replaces all original method calls withing mixin method with renamed one
-	 * 
+	 * class method is transformed into function
+	 * mf code injected into cf with
+	 * base.method calls becoming function calls
 	 * @param	mixinFql
 	 * @param	mf
 	 * @param	cf
@@ -287,31 +287,97 @@ class Mixin
 	static function overwriteMethod(mixinFql:String, mf:Field, cf:Field)
 	{		
 
-		var original = cf.name;
-		var renamed = mixinFql.replace(".", "_").toLowerCase() + "_" + original;
-		cf.name = renamed;
+		copyMeta(cf, mf);
 		
-		copyMeta(mf, cf);
-
-		//replace base.$oldName with this.$newName
+		var baseFuncName = mixinFql.replace(".", "_").toLowerCase() + "_" + cf.name;
+		var baseFunc = cf.extractFFunFunction();
+		
+		var baseFuncExpr:Expr = {
+			expr: EFunction(baseFuncName, baseFunc),
+			pos: mf.pos
+		};
+		
+		var mfunc = mf.extractFFunFunction();	
+		
 		function searchAndReplace(e:Expr)
-		{
+		{			
 			switch (e.expr)
 			{
-				case EField(macro base, name) if (name == original):					
-					e.expr = EField(macro this, renamed);
+				
+				case ECall(_.expr => EField(macro base, field), p) if (field == cf.name):						
+					e.expr = ECall(macro $i{baseFuncName}, p);
 				case _:
 					e.iter(searchAndReplace);
 			}			
 		};		
+
+		searchAndReplace(mfunc.expr);
+		//prepend basefunc
+		mfunc.expr = macro $b{[ baseFuncExpr, mfunc.expr ]};
+		
+		//replace original
+		cf.replaceFFunFunction(mfunc);
+		
+		if (mf.meta.hasMetaWithName("debug"))
+		{
+			Sys.println('Overwritten method $mixinFql > ${mf.name}:');
+			Sys.println(cf.extractFFunFunction().expr.toString());
+		}
+	}
+	
+	static function overwriteConstructor(mf:Field, cf:Field)
+	{
+		copyMeta(cf, mf);
+		
+		var baseFunc = cf.extractFFunFunction();
+		
+		function searchForReturn(e:Expr)
+		{
+			switch (e.expr)
+			{
+				case EReturn(_):
+					Context.fatalError('Constructors with <return> statements can\'t be overwritten', cf.pos);
+				case _:
+					e.iter(searchForReturn);
+			}
+		}
+		
+		searchForReturn(baseFunc.expr);
 		
 		
+		var injected = false;
+		function searchAndReplace(e:Expr)
+		{			
+			switch (e.expr)
+			{
+				case ECall(macro base, []):			
+					if (!injected)
+					{
+						injected = true;
+						e.expr = baseFunc.expr.expr;
+					} else 
+						Context.fatalError('base() constructor called more that once', cf.pos);
+					
+				case _:
+					e.iter(searchAndReplace);
+			}			
+		};		
+
 		var mfunc = mf.extractFFunFunction();	
 		searchAndReplace(mfunc.expr);
+		
+		//replace original
+		cf.replaceFFunFunction(mfunc);
+		
+		if (mf.meta.hasMetaWithName("debug"))
+		{
+			Sys.println('Overwritten constructor:');
+			Sys.println(cf.extractFFunFunction().expr.toString());
+		}
 	}
 	
 	/**
-	 * Check if anywere in the hierarchy mixin was already included
+	 * Check if anywhere in the hierarchy mixin was already included
 	 * @param	base
 	 * @param	mixin
 	 */
@@ -345,46 +411,7 @@ class Mixin
 	
 	
 	
-	static function injectBaseConstructor(mf:Field, cf:Field)
-	{
-		var mfunc = mf.extractFFunFunction();	
-		var injectExpr = cf.extractFFunFunction().expr;	//should be a block
-		
-		function searchForReturn(e:Expr)
-		{
-			switch (e.expr)
-			{
-				case EReturn(_):
-					Context.fatalError('Constructors with <return> statements can\'t be overwritten', cf.pos);
-				case _:
-					e.iter(searchForReturn);
-			}
-		}
-		
-		searchForReturn(injectExpr);
-		
-		copyMeta(mf, cf);
-		
-		var injected = false;
-		//replace base.$oldName with this.$newName
-		function searchAndReplace(e:Expr)
-		{			
-			switch (e.expr)
-			{
-				case ECall(macro base, []):										
-					if (!injected)
-					{
-						injected = true;
-						e.expr = injectExpr.expr;
-					} else 
-						Context.fatalError('base() constructor called more that once', mf.pos);				
-				case _:
-					e.iter(searchAndReplace);
-			}			
-		};		
-
-		searchAndReplace(mfunc.expr);
-	}
+	
 	
 	
 	/**
@@ -421,7 +448,32 @@ class Mixin
 		return ct.module.endsWith("." + ct.name) ? ct.module : ct.module + "." + ct.name;
 	}
 	
-	
+	/**
+	 * Fails if field is getter or setter for some property with @:isVar metadata
+	 * Overwriting this kind of fields will result in stack overflow: overwritten method will call original and vice versa.
+	 * @param	field
+	 * @param	fields
+	 */
+	static function assertFieldIsNotGetSetForIsVarProperty(field:Field, fields:Array<Field>)
+	{
+		if (field.isMethod())
+			for (f in fields)
+				if (f.meta.hasMetaWithName(":isVar"))
+					switch (f.kind)
+					{
+						case FProp(get, set, t, e):
+							if (get == "get") get = "get_" + f.name;
+							if (set == "set") set = "set_" + f.name;
+							
+							if (get == field.name)
+								Context.fatalError('Overwriting a property getter for @:isVar property is not supported', field.pos);
+								
+							if (set == field.name)
+								Context.fatalError('Overwriting a property setter for @:isVar property is not supported', field.pos);
+							
+						case _:
+					}
+	}
 	
 	
 }
