@@ -4,6 +4,7 @@ import cases.MixinTestCase;
 import cases.OverwriteCase;
 import haxe.unit.TestRunner;
 
+
 class RunAll 
 {
 	public static function main()
@@ -22,4 +23,3 @@ class RunAll
 	}
 	
 }
-
