@@ -1,5 +1,7 @@
 extraParams.hxml
 
+-lib compiletime:2.7.0
+
 -cp lib
 -cp test
 -cp macro_test

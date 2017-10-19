@@ -8,8 +8,6 @@ class RunAll
 {
 	public static function main()
 	{
-		
-		
 		var runner = new TestRunner();
 		
 		runner.add(new AutoImportsTestCase());

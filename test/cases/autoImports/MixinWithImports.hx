@@ -13,7 +13,7 @@ enum SomeEnum
 	var field:SomeOtherClass<Int>;
 	
 	@base function assertTrue(b:Bool, ?c:PosInfos):Void;
-	@base function assertEquals<T>(expected:T, actual:T, ?c:PosInfos):Void;
+//	@base function assertEquals<T>(expected:T, actual:T, ?c:PosInfos):Void;
 	
 	@overwrite public function new()
 	{
@@ -65,12 +65,14 @@ enum SomeEnum
 	
 	public function testSwitch():Void
 	{
-		var someEnum:SomeEnum = ONE(5);
+		
+		var someEnum:SomeEnum = SomeEnum.ONE(5);
 		assertEquals(5, switch (someEnum)
 		{
 			case ONE(v): new SomeOtherClass(v).getValue();
 			case TWO(v): new SomeOtherClass(v).getValue();
 		});
+		
 		
 	}
 	

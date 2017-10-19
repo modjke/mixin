@@ -13,7 +13,6 @@ import mixin.typer.TypeStack;
 import mixin.typer.Typer;
 
 using haxe.macro.Tools;
-using mixin.tools.MoreMacroTools;
 using mixin.tools.MoreComplexTypeTools;
 using mixin.tools.FieldTools;
 using mixin.tools.MetadataTools;
@@ -56,8 +55,8 @@ class Mixin
 		
 		var lc = Context.getLocalClass().get();				
 		
-		if (!lc.isInterface)
-			Context.fatalError('Mixin should be declared as interface', lc.pos);
+		if (!lc.isInterface) Context.fatalError('Mixin should be declared as interface', lc.pos);
+		if (Context.getLocalUsing().length > 0) Context.fatalError('Mixins module with usings are not supported', lc.pos);
 
 		var mixinFql = getFqlClassName(lc);
 		
@@ -68,6 +67,9 @@ class Mixin
 		var interfaceFields:Array<Field> = [];
 		var mixinFields:Array<Field> = [];
 		
+		
+		var typer:Typer;
+
 		var buildFields = Context.getBuildFields();
 		
 		for (field in buildFields)
@@ -75,12 +77,15 @@ class Mixin
 			#if display
 			
 			Typer.prepareForDisplay(field);
-			Typer.resolveComplexTypesInField(field);
 			
 			#else
 
 			Typer.makeFieldTypeDeterminable(field);
-			Typer.resolveComplexTypesInField(field);			
+			
+			if (typer == null) 
+				typer = new Typer(Context.getLocalModule(), Context.getLocalImports(), lc.pos);
+			
+			typer.resolveComplexTypesInField(field);
 			
 			switch (getFieldMixinType(field))
 			{	
@@ -106,7 +111,10 @@ class Mixin
 		#if !display
 		
 		for (field in buildFields)
-			Typer.resolveComplexTypesInFieldExpr(field, buildFields);
+		{			
+			trace(field.name);
+			typer.resolveComplexTypesInFieldExpr(field, buildFields);			
+		}
 			
 		#end
 		
@@ -157,6 +165,7 @@ class Mixin
 			}
 			#else 
 			
+
 			switch (getFieldMixinType(mf))
 			{
 				case MIXIN:

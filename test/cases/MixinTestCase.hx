@@ -1,6 +1,11 @@
 package cases;
 import haxe.unit.TestCase;
 
+class Sub
+{
+	
+}
+
 class MixinTestCase extends TestCase
 {
 
