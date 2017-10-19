@@ -1,4 +1,5 @@
 package mixin.same;
+import haxe.ds.ArraySort;
 import haxe.macro.ComplexTypeTools;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Access;
@@ -15,14 +16,14 @@ using mixin.tools.MoreComplexTypeTools;
 @:publicFields
 class Same 
 {
-	static function functionArgs(a:Array<FunctionArg>, b:Array<FunctionArg>):Bool
+	static function functionArgs(a:Array<FunctionArg>, b:Array<FunctionArg>, ?typer:Typer):Bool
 	{	
 		return arrays(a, b, function(a, b)
 		{
 			return  a.name == b.name &&
 					a.opt == b.opt &&
 					metadatas(a.meta, b.meta) &&					
-					complexTypes(a.type, b.type) &&
+					complexTypes(a.type, b.type, typer) &&
 					exprs(a.value, b.value);
 		});
 	}
@@ -60,19 +61,27 @@ class Same
 			});
 	}
 	
-	static function typeParamDecls(?a:Array<TypeParamDecl>, ?b:Array<TypeParamDecl>)
+	static function typeParamDecls(a:Array<TypeParamDecl>, b:Array<TypeParamDecl>, ?typer:Typer)
 	{
-		if (a != null && a.length > 0 || b != null && b.length > 0) {
-			throw 'TypeParams are not yet supported';
-		}
-		return true;
+		
+		return arrays(a, b, function (a, b) return typeParamDecl(a, b, typer));
 	}
 	
-	static function complexTypes(a:ComplexType, b:ComplexType)
+	static function typeParamDecl(a:TypeParamDecl, b:TypeParamDecl, ?typer:Typer)
+	{		
+		return a.name == b.name &&
+			   Same.metadatas(a.meta, b.meta) &&
+			   Same.arrays(a.constraints, b.constraints, function (a, b) return complexTypes(a, b, typer)) &&
+			   Same.typeParamDecls(a.params, b.params, typer);
+			   
+	}
+	
+	static function complexTypes(a:ComplexType, b:ComplexType, ?typer:Typer)
 	{		
 		//TODO: find a better way
-		return  a.safeToString() == 
-				b.safeToString();
+		return  typer != null ? 
+					typer.resolve(a).safeToString() == typer.resolve(b).safeToString() :
+					a.safeToString() == b.safeToString();
 	}
 	
 	static function exprs(?a:Expr, ?b:Expr)
@@ -93,14 +102,15 @@ class Same
 	
 	static function arrays<T>(?a:Array<T>, ?b:Array<T>, compare:T->T->Bool):Bool
 	{		
-		if (a.length == b.length)
-		{			
-			for (i in 0...a.length)
-				if (!compare(a[i], b[i]))
-					return false;
-					
-			return true;
-		}
+		if (a != null && b != null)		
+			if (a.length == b.length)
+			{			
+				for (i in 0...a.length)
+					if (!compare(a[i], b[i]))
+						return false;
+						
+				return true;
+			}
 		
 		return false;
 	}

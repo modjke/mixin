@@ -13,8 +13,9 @@ enum SomeEnum
 	var field:SomeOtherClass<Int>;
 	
 	@base function assertTrue(b:Bool, ?c:PosInfos):Void;
-//	@base function assertEquals<T>(expected:T, actual:T, ?c:PosInfos):Void;
+	@base function assertEquals<T>(expected:T, actual:T, ?c:PosInfos):Void;
 	
+
 	@overwrite public function new()
 	{
 		base();

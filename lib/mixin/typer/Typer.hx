@@ -12,6 +12,7 @@ import sys.FileSystem;
 using haxe.macro.Tools;
 using mixin.tools.MoreComplexTypeTools;
 using mixin.tools.FieldTools;
+using mixin.tools.MetadataTools;
 using StringTools;
 
 class Typer 
@@ -23,21 +24,21 @@ class Typer
 		?sub: String
 	}>;
 	
-	public function new(module:String, imports:Array<ImportExpr>, pos:Position)
+	public function new(subModule:String, imports:Array<ImportExpr>)
 	{
-		this.module = module;			
+		this.module = subModule;			
 		
 		this.imports = new StringMap();		
 		
-		function addImport(module:String, ?alias:String)
+		function addImport(subModule:String, ?alias:String)
 		{
-			var tp = parseTypePath(module);
+			var tp = parseTypePath(subModule);
 			
-			//trace(alias != null ? alias : name, pack.join("."), name, sub);
+			//trace(alias != null ? alias : tp.name, typePathToString(tp, false));
 			this.imports.set(alias != null ? alias : tp.name, { pack: tp.pack, name: tp.name, sub: tp.sub });
 		}
 		
-		var modulePath = Path.withExtension(module.replace(".", "/"), "hx");
+		var modulePath = Path.withExtension(subModule.replace(".", "/"), "hx");
 		var moduleDir = Path.directory(modulePath);
 		
 		for (cp in Context.getClassPath())
@@ -47,25 +48,38 @@ class Typer
 				if (Path.extension(entry) == "hx")
 				{
 					var hxPath = Path.join([moduleDir, entry]);
-					var module = Path.withoutExtension(hxPath).replace("/", ".");
-					addImport(module);
+					var subModule = Path.withoutExtension(hxPath).replace("/", ".");
+					
+					addImport(subModule);
+										
+					for (t in Context.getModule(subModule))
+						switch (t)
+						{
+							case TInst(_.get() => t, params):
+								if (!this.imports.exists(t.name))
+								{
+									var subModule = t.module.endsWith(t.name) ? t.module : t.module + "." + t.name;
+									addImport(subModule);
+								}
+							case _:
+						}
 				}
 		}
 
 		for (expr in imports)
 		{		
-			var module = expr.path.map(function (p) return p.name).join(".");
+			var subModule = expr.path.map(function (p) return p.name).join(".");
 			
 			switch (expr.mode)
 			{
 				
 				case INormal:					
-					addImport(module);
+					addImport(subModule);
 					
 				case IAsName(alias): 
-					addImport(module, alias);					
+					addImport(subModule, alias);					
 					
-				case IAll: Context.fatalError('Wildcard imports are not supported in mixins', pos);				
+				case IAll: throw 'Wildcard imports are not supported in mixins';
 			}			
 		}
 		
@@ -237,68 +251,69 @@ class Typer
 		}
 		
 		if (expr != null)
-		{
+		{			
 			function process(e:Expr)
 			{
-				try {
-					var block:Bool = false;
+				try {			
+					if (e != null)
+						switch (e.expr)
+						{
+							case EBlock(es):
+								typeStack.pushLevel();
+								for (e in es) process(e);
+								typeStack.popLevel();
+								
+								
+							case ENew(t, p):		
+								e.expr = ENew(resolveTypePath(t), p);
+								
+								for (ex in p)
+									process(ex);
+								
+							case EField(expr, f):			
+								
+								var eStr = expr.toString();
 					
-					switch (e.expr)
-					{
-						case EBlock(_):
-							block = true;
-							
-						case ENew(t, p):					
-														
-							e.expr = ENew(resolveTypePath(t), p);
-							
-							for (e in p)
-								process(e);
-							
-						case EField(expr, f):			
-							
-							var eStr = expr.toString();
-							
-							if (!typeStack.hasIdentifier(eStr) && looksLikeClassOrClassSub(eStr))
-							{
-								var tp = parseTypePath(eStr);
-								tp = resolveTypePath(tp);
+								if (!typeStack.hasIdentifier(eStr) && looksLikeClassOrClassSub(eStr))
+								{
+									var tp = parseTypePath(eStr);
+									tp = resolveTypePath(tp);
+									
+									var newExpr = Context.parse(typePathToString(tp, false), e.pos);
+									e.expr = EField(newExpr, f);								
+								} else 
+									process(expr);
 								
-								var newExpr = Context.parse(typePathToString(tp, false), e.pos);
-								e.expr = EField(newExpr, f);								
-							}
-							
-							
-						case EVars(vars):
-							for (v in vars)
-							{								
-								v.type = resolve(v.type);
-								typeStack.addVar(v.name, v.type);
 								
-								process(v.expr);
-							}
-							
-							
-						case EConst(CIdent(s)):
-							if (!typeStack.hasIdentifier(s) && looksLikeClassOrClassSub(s))
-							{
-								var tp = parseTypePath(s);
-								tp = resolveTypePath(tp);
+							case EVars(vars):
+								for (v in vars)
+								{								
+									v.type = resolve(v.type);
+									typeStack.addVar(v.name, v.type);
+									
+									process(v.expr);
+								}
 								
-								e.expr = Context.parse(typePathToString(tp, false), e.pos).expr;								
-							}
-						case _:
-							
-						if (block) typeStack.pushLevel();
-						e.iter(process);
-						if (block) typeStack.popLevel();		
-					}
+								
+							case EConst(CIdent(s)):
+								
+								if (!typeStack.hasIdentifier(s) && looksLikeClassOrClassSub(s))
+								{
+									var tp = parseTypePath(s);
+									tp = resolveTypePath(tp);
+									
+									e.expr = Context.parse(typePathToString(tp, false), e.pos).expr;								
+								} 
+							case _:
+								e.iter(process);
+						
+						}
 					
 					
 				} catch (exception:Dynamic)
 				{				
 				
-					trace('Exception while parsing expression: ' + expr.toString());
+					trace(e);
 					
 					Context.fatalError("Exception while resolving types: " + Std.string(exception), e.pos);
 				}
@@ -306,7 +321,22 @@ class Typer
 				
 			}
 			
+			var debug = field.meta.hasMetaWithName("debug");
+			if (debug)
+			{
+				Context.warning('Printing debug data for method ${field.name} (remove @debug meta to disable)', field.pos);
+				Sys.println(field.name + " WAS:");
+				Sys.println(expr.toString());
+			}
+			
 			process(expr);
+			
+			if (debug)
+			{
+				Sys.println(field.name + " BECAME:");
+				Sys.println(expr.toString());
+			}
+			
 		}
 	}
 	
@@ -316,7 +346,7 @@ class Typer
 	 * @param	field to check
 	 * @return 	true if satisfies
 	 */
-	public static function satisfiesInterface(interf:Field, field:Field):Bool
+	public function satisfiesInterface(interf:Field, field:Field):Bool
 	{		
 		if (interf == null) throw 'Interface field should not be null';
 		if (field == null) throw 'Class field should not be null';
@@ -330,19 +360,19 @@ class Typer
 			{
 				case [FFun(af), FFun(bf)]:
 
-					Same.functionArgs(af.args, bf.args) &&
-					Same.complexTypes(af.ret, bf.ret) &&
+					Same.functionArgs(af.args, bf.args, this) &&
+					Same.complexTypes(af.ret, bf.ret, this) &&
 					Same.typeParamDecls(af.params, bf.params);												
 					
 				case [FProp(ag, as, at, ae), FProp(bg, bs, bt, be)]:
 					
 					ag == bg &&
 					as == bs &&
-					Same.complexTypes(at, bt);
+					Same.complexTypes(at, bt, this);
 						
 				case [FVar(at, ae), FVar(bt, be)]:
 				
-					Same.complexTypes(at, bt);
+					Same.complexTypes(at, bt, this);
 					
 				case _:		
 					
@@ -391,7 +421,7 @@ class Typer
 	
 	static function typePathToString(tp:TypePath, includeTypeParams:Bool)
 	{
-		var str = tp.pack.join(".") + "." + tp.name;
+		var str = tp.pack.join(".") + (tp.pack.length > 0 ? "." + tp.name : tp.name);
 		if (tp.sub != null) str += "." + tp.sub;
 		if (includeTypeParams && tp.params != null && tp.params.length > 0)
 		{
@@ -413,6 +443,7 @@ class Typer
 	// false if it is package.sub.Class or smth else
 	static function looksLikeClassOrClassSub(s:String):Bool
 	{
+		
 		var parts = s.split(".");
 		var re = ~/^[A-Z][_,A-Z,a-z,0-9]*/;
 		

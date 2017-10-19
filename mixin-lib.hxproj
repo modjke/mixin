@@ -17,7 +17,6 @@
   <classpaths>
     <class path="lib" />
     <class path="test" />
-    <class path="macro_test" />
   </classpaths>
   <!-- Build options -->
   <build>

@@ -67,57 +67,55 @@ class Mixin
 		var interfaceFields:Array<Field> = [];
 		var mixinFields:Array<Field> = [];
 		
-		
-		var typer:Typer;
-
 		var buildFields = Context.getBuildFields();
 		
-		for (field in buildFields)
-		{				
-			#if display
-			
-			Typer.prepareForDisplay(field);
-			
-			#else
-
-			Typer.makeFieldTypeDeterminable(field);
-			
-			if (typer == null) 
-				typer = new Typer(Context.getLocalModule(), Context.getLocalImports(), lc.pos);
-			
-			typer.resolveComplexTypesInField(field);
-			
-			switch (getFieldMixinType(field))
-			{	
-				case MIXIN:
-					if (field.isConstructor()) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
-						
-					makeSureFieldCanBeMixin(field, buildFields);
-				case BASE:
-					if (field.isConstructor()) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
-					
-					makeSureFieldCanBeBase(field);
-				case OVERWRITE:	
-					makeSureFieldCanBeOverwrite(field);
-				
+		#if display
+			for (field in buildFields)
+			{				
+				Typer.prepareForDisplay(field);
 			}
-			#end
 			
-			mixinFields.push(field);			
-			if (field.isPublic() && !field.isConstructor())
-				interfaceFields.push(field.makeInterfaceField());
-		}
+		#else
 		
-		#if !display
+			var typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
 		
-		for (field in buildFields)
-		{			
-			trace(field.name);
-			typer.resolveComplexTypesInFieldExpr(field, buildFields);			
-		}
+			for (field in buildFields)
+			{				
+
+				Typer.makeFieldTypeDeterminable(field);
+				
+				if (typer == null) 
+					typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
+				
+				typer.resolveComplexTypesInField(field);
+				
+				switch (getFieldMixinType(field))
+				{	
+					case MIXIN:
+						if (field.isConstructor()) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
+							
+						makeSureFieldCanBeMixin(field, buildFields);
+					case BASE:
+						if (field.isConstructor()) Context.fatalError('Mixin only allowed to have @overwrite constructor', field.pos);
+						
+						makeSureFieldCanBeBase(field);
+					case OVERWRITE:	
+						makeSureFieldCanBeOverwrite(field);
+					
+				}
+
+				mixinFields.push(field);			
+				if (field.isPublic() && !field.isConstructor())
+					interfaceFields.push(field.makeInterfaceField());
+			}
 			
+			for (field in buildFields)
+			{			
+				typer.resolveComplexTypesInFieldExpr(field, buildFields);			
+			}
+				
+		
 		#end
-		
 		
 		if (!mixins.exists(mixinFql))
 			mixins.set(mixinFql, {
@@ -163,9 +161,11 @@ class Mixin
 				
 				case _:
 			}
+			
 			#else 
 			
-
+			var typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
+			
 			switch (getFieldMixinType(mf))
 			{
 				case MIXIN:
@@ -179,7 +179,7 @@ class Mixin
 						//if mixin field is public there is no need to check interface
 						//haxe will check it for us
 						//we have to check only private @:base fields
-						if (mf.isPrivate() && !Typer.satisfiesInterface(mf, cf))
+						if (mf.isPrivate() && !typer.satisfiesInterface(mf, cf))
 						{
 							Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
 							Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
@@ -191,7 +191,7 @@ class Mixin
 					{
 						assertFieldIsNotGetSetForIsVarProperty(cf, fields);
 						
-						if (Typer.satisfiesInterface(mf, cf))
+						if (typer.satisfiesInterface(mf, cf))
 						{
 							if (cf.isConstructor())
 								overwriteConstructor(mf, cf);
