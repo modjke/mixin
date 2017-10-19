@@ -10,8 +10,8 @@ using mixin.tools.FieldTools;
 using mixin.tools.MoreMacroTools;
 
 class Typer 
-{
-
+{	
+	
 	public static function makeFieldTypeDeterminable(f:Field)
 	{
 		switch (f.kind)
@@ -45,7 +45,6 @@ class Typer
 	
 	public static function resolveComplexTypesInField(field:Field)
 	{
-		
 		var p = field.pos;
 		field.kind = switch (field.kind)
 		{
@@ -57,8 +56,7 @@ class Typer
 				for (a in f.args) a.type = a.type.resolve(p);
 				f.ret = f.ret.resolve(p);
 				FFun(f);
-		}
-		
+		}		
 	}
 	
 	

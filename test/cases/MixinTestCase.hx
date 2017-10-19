@@ -39,8 +39,7 @@ class Object implements Mixin
 
 	public function new()
 	{
-		
-		trace("Object new was called");
+	
 	}
 }
 
@@ -81,8 +80,6 @@ class Object implements Mixin
 	//base should be called
 	@overwrite public function new() {
 		base();
-
-		trace("Mixin new was called");
 	}
 	
 }
