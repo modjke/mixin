@@ -1,5 +1,6 @@
 package cases.conflicts;
 import haxe.unit.TestCase;
+import mixin.Base;
 
 class MultipleOverwritesTestCase extends TestCase
 {
@@ -56,13 +57,13 @@ class Object implements Mixin2 implements Mixin1
 
 	@overwrite public function new(v:String)
 	{
-		base();
+		$base();
 		this.mixin1String = v;
 	}
 	
 	@overwrite public function changeValue(v:String):Void
 	{		
-		base.changeValue(v);
+		$base.changeValue(v);
 		this.mixin1String = v;
 	}
 }
@@ -72,14 +73,16 @@ class Object implements Mixin2 implements Mixin1
 	public var mixin2String(default, null):String = null;
 	
 	@overwrite public function new(v:String)
-	{
-		base();
+	{		
+		$base();
+		
 		this.mixin2String = v;
 	}
 	
 	@overwrite public function changeValue(v:String):Void
-	{		
-		base.changeValue(v);
+	{				
+		$base.changeValue(v);
+		
 		this.mixin2String = v;		
 	}
 }

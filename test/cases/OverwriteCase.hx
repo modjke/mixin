@@ -73,21 +73,21 @@ class ValueHolder implements ValueHolderMixin
 	function get_value():Int
 	{
 		getValueCalls++;
-		return base.get_value();
+		return $base.get_value();
 	}
 	
 	@overwrite
 	function set_value(v:Int):Int
 	{		
 		setValueCalls++;
-		return base.set_value(v);
+		return $base.set_value(v);
 	}
 	
 	@overwrite
 	public function incrementValue():Void
 	{
 		incrementValueCalls++;
-		base.incrementValue();		
+		$base.incrementValue();		
 	}
 	
 	public function callIncrementValue(times:Int):Void

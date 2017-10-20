@@ -84,7 +84,7 @@ class Mixin
 				
 				mixinFields.push(field);
 				if (field.isPublic() && !field.isConstructor())
-					interfaceFields.push(field.makeInterfaceField());
+					interfaceFields.push(field.makeInterfaceField());				
 			}
 			
 		#else
@@ -156,77 +156,97 @@ class Mixin
 
 		var cached = mixins.get(mixinFql);
 		
-		for (mf in cached.fields)
-		{
-			//mf - mixin field
-			//cf - existing class field (can be null)
-		
-			var cf = fields.find(function (f) return f.name == mf.name);
-						
-			#if display
-			
-			switch (getFieldMixinType(mf))
+		#if display
+			for (mf in cached.fields)
 			{
-				case MIXIN | OVERWRITE:
-					if (cf == null)
-						fields.push(mf);
-				
-				case _:
+			
+			
+				switch (getFieldMixinType(mf))
+				{
+					case MIXIN | OVERWRITE:
+						var noConflicts = !fields.exists(function (f) return f.name == mf.name);
+						if (noConflicts)
+							fields.push(mf);
+					
+					case _:
+				}
 			}
-			
-			#else 
-			
+		#else 
+			var overwriteCache = new StringMap<String>();
 			var typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
 			
-			switch (getFieldMixinType(mf))
-			{
-				case MIXIN:
-					if (cf == null)
-						fields.push(mf);
-					else 
-						Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
-				case BASE:
-					if (cf != null)
-					{
-						//if mixin field is public there is no need to check interface
-						//haxe will check it for us
-						//we have to check only private @:base fields
-						if (mf.isPrivate() && !typer.satisfiesInterface(mf, cf))
+			for (mf in cached.fields)
+			{			
+				//mf - mixin field
+				//cf - existing class field (can be null)
+				var cf = fields.find(function (f) return f.name == mf.name);
+				
+				switch (getFieldMixinType(mf))
+				{
+					case MIXIN:
+						if (cf == null)
+							fields.push(mf);
+						else 
+							Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
+					case BASE:
+						if (cf != null)
 						{
-							Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
-							Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
-						}						
-					} else 
-						Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
-				case OVERWRITE:
-					if (cf != null)
-					{
-						assertFieldIsNotGetSetForIsVarProperty(cf, fields);
-						
-						if (typer.satisfiesInterface(mf, cf))
-						{
-							if (cf.isConstructor())
-								overwriteConstructor(mf, cf);
-							else
-								overwriteMethod(mixinFql, mf, cf);
+							//if mixin field is public there is no need to check interface
+							//haxe will check it for us
+							//we have to check only private @:base fields
+							if (mf.isPrivate() && !typer.satisfiesInterface(mf, cf))
+							{
+								Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
+								Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
+							}						
 						} else 
+							Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
+					case OVERWRITE:
+						if (cf != null)
 						{
-							Context.warning('@overwrite field for <${cf.name}> is defined here', mf.pos);
-							Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
+							assertFieldIsNotGetSetForIsVarProperty(cf, fields);
+							
+							if (typer.satisfiesInterface(mf, cf))
+							{
+								if (cf.isConstructor())
+									overwriteConstructor(mf, cf);
+								else {																
+									overwriteMethod(mixinFql, fields, mf, cf);
+									overwriteCache.set(mf.name, cf.name);
+								}
+							} else 
+							{
+								Context.warning('@overwrite field for <${cf.name}> is defined here', mf.pos);
+								Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
+							}
+							
+						} else {								
+							fields.push(mf);
+							
+							Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);						
 						}
 						
-					} else {								
-						fields.push(mf);
 						
-						Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);						
-					}
-					
-					
+				}
 			}
 			
-			#end
-		}
+			for (f in fields)
+				switch (getFieldMixinType(f)) {
+					case MIXIN | OVERWRITE:
+						switch (f.kind)
+						{
+							case FFun(f):
+								replaceBaseCalls(f.expr, overwriteCache);
+							case _:
+						}
+					case _:
+				}
+				
+			
+		#end
 		
+		
+
 		return fields;
 	}
 		
@@ -291,9 +311,7 @@ class Mixin
 			
 		}
 	}
-	
-	
-	
+
 	static function getMultipleOverwritesAction(f:Field):MultipleOverwritesAction
 	{
 		var meta = f.meta.getMetaWithName("multipleOverwrites");
@@ -334,7 +352,7 @@ class Mixin
 	 * @param	mf
 	 * @param	cf
 	 */
-	static function overwriteMethod(mixinFql:String, mf:Field, cf:Field)
+	static function overwriteMethod(mixinFql:String, fields:Array<Field>, mf:Field, cf:Field)
 	{		
 
 		var wasOverwrittenByAnotherMixin = cf.meta.hasMetaWithName("overwrite");
@@ -348,37 +366,12 @@ class Mixin
 				case IGNORE:				
 			};
 		
-		copyMeta(cf, mf);
+		copyMeta(mf, cf);
 		
-		var baseFuncName = mixinFql.replace(".", "_").toLowerCase() + "_" + cf.name;
-		var baseFunc = cf.extractFFunFunction();
+		var baseMethodName = mixinFql.replace(".", "_").toLowerCase() + "_" + cf.name;
+		cf.name = baseMethodName;
 		
-		var baseFuncExpr:Expr = {
-			expr: EFunction(baseFuncName, baseFunc),
-			pos: mf.pos
-		};
-		
-		var mfunc = mf.extractFFunFunction();	
-		
-		function searchAndReplace(e:Expr)
-		{			
-			switch (e.expr)
-			{
-				
-				case ECall(_.expr => EField(macro base, field), p) if (field == cf.name):						
-					e.expr = ECall(macro $i{baseFuncName}, p);
-				case _:
-					e.iter(searchAndReplace);
-			}			
-		};		
-
-		searchAndReplace(mfunc.expr);
-		
-		//prepend basefunc
-		MoreExprTools.prepend(mfunc.expr, baseFuncExpr);		
-		
-		//replace original
-		cf.replaceFFunFunction(mfunc);
+		fields.push(mf);
 		
 		if (mf.meta.hasMetaWithName("debug"))
 		{
@@ -412,13 +405,13 @@ class Mixin
 		{			
 			switch (e.expr)
 			{
-				case ECall(macro base, []):			
+				case ECall(macro $base, []):			
 					if (!injected)
 					{
 						injected = true;
 						e.expr = baseFunc.expr.expr;
 					} else 
-						Context.fatalError('base() constructor called more that once', cf.pos);
+						Context.fatalError("$base() constructor called more that once", cf.pos);
 					
 				case _:
 					e.iter(searchAndReplace);
@@ -436,6 +429,25 @@ class Mixin
 			Sys.println('Overwritten constructor:');
 			Sys.println(cf.extractFFunFunction().expr.toString());
 		}
+	}
+	
+	static function replaceBaseCalls(expr:Expr, map:StringMap<String>)
+	{
+		function searchAndReplace(e:Expr)
+		{			
+			switch (e.expr)
+			{				
+				case EField(_.expr => EConst(CIdent("$base")), field):		
+					if (map.exists(field))
+						e.expr = EField(macro this, map.get(field));
+					else 
+						Context.fatalError('Unknown base field: ' + field, e.pos);
+				case _:
+					e.iter(searchAndReplace);
+			}			
+		};		
+
+		searchAndReplace(expr);
 	}
 	
 	/**

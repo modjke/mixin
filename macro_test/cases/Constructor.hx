@@ -1,7 +1,7 @@
 //-test1-/Mixin only allowed to have @overwrite constructor/
 //-test2-/Mixin only allowed to have @overwrite constructor/
 //-test3-/Constructors with <return> statements can\'t be overwritten/
-//-test4-/base\(\) constructor called more that once/
+//-test4-/\$base\(\) constructor called more that once/
 package cases;
 
 class Constructor implements Mixin
@@ -31,14 +31,14 @@ class Constructor implements Mixin
 	
 	#if test3
 	@overwrite function new() {
-		base();
+		$base();
 	}
 	#end
 	
 	#if test4
 	@overwrite function new() {
-		base();
-		base();
+		$base();
+		$base();
 	}
 	#end
 	
