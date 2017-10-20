@@ -48,14 +48,15 @@ class Typer
 		{
 			var dir = Path.join([cp, moduleDir]);
 
-			for (entry in FileSystem.readDirectory(dir))
-				if (Path.extension(entry) == "hx")
-				{
-					var hxPath = Path.join([moduleDir, entry]);
-					var subModule = Path.withoutExtension(hxPath).replace("/", ".");
-					
-					addImport(subModule);
-				}
+			if (FileSystem.exists(dir) && FileSystem.isDirectory(dir))
+				for (entry in FileSystem.readDirectory(dir))
+					if (Path.extension(entry) == "hx")
+					{
+						var hxPath = Path.join([moduleDir, entry]);
+						var subModule = Path.withoutExtension(hxPath).replace("/", ".");
+						
+						addImport(subModule);
+					}
 		}
 
 		for (expr in imports)
