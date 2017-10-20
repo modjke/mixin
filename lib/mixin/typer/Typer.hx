@@ -111,19 +111,35 @@ class Typer
 	}
 	
 	public function resolveTypePath(tp:TypePath):TypePath{
-		
-		var name = tp.sub != null ? tp.sub : tp.name;
-		if (tp.pack.length == 0 && imports.exists(name))
+				
+		//if pack has something in it then we probably do not need to resolve anything at all
+		if (tp.pack.length == 0)
 		{		
-			var imp = imports.get(name);				
-			return {
-				pack: imp.pack,
-				name: imp.name,
-				params: tp.params,
-				sub: imp.sub
-			}				
-		} else 
-			return tp;
+			//if typepath supplied as Module.Sub and Sub was directly imported
+			if (tp.sub != null && imports.exists(tp.sub))
+			{
+				var imp = imports.get(tp.sub);
+				return {
+					pack: imp.pack,
+					name: imp.name,
+					params: tp.params,
+					sub: imp.sub
+				}	
+			} else 
+			//if typepath supplied as Module or Module.Sub and Sub was not directly imported
+			if (tp.name != null && imports.exists(tp.name))
+			{
+				var imp = imports.get(tp.name);
+				return {
+					pack: imp.pack,
+					name: imp.name,
+					params: tp.params,
+					sub: tp.sub
+				}	
+			} 					
+		} 
+		
+		return tp;
 	}
 	
 	function mapComplexType(type:ComplexType, map:TypePath->TypePath):ComplexType

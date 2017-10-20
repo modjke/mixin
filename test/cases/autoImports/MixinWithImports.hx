@@ -38,7 +38,7 @@ enum SomeEnum
 		
 	public function testValueFromLocalVar():Void
 	{
-		var some:SomeOtherClass<Int>;
+		var some:SomeOtherClass.SOC<Int>;
 		var v:Int = 5;
 		some = new SomeOtherClass(v);
 		assertTrue(some.getValue() == v);
