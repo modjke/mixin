@@ -9,6 +9,7 @@ import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
 import mixin.same.Same;
+import mixin.tools.MoreExprTools;
 import mixin.typer.VarStack;
 import mixin.typer.Typer;
 
@@ -26,6 +27,13 @@ enum FieldMixinType
 	MIXIN;
 	BASE;
 	OVERWRITE;
+}
+
+enum MultipleOverwritesAction
+{
+	ERROR;
+	WARN;
+	IGNORE;
 }
 
 typedef CachedMixin = {
@@ -286,7 +294,36 @@ class Mixin
 	
 	
 	
-	
+	static function getMultipleOverwritesAction(f:Field):MultipleOverwritesAction
+	{
+		var meta = f.meta.getMetaWithName("multipleOverwrites");
+		
+		if (meta != null) {
+			if (meta.params == null || meta.params.length != 1) 
+				Context.fatalError('Invalid number of parameters for @multipleOverwrites', f.pos);
+				
+			
+			var param = meta.params[0];			
+			var action:MultipleOverwritesAction = switch (param.expr)
+			{
+				case EConst(CString(_.toLowerCase() => action)):
+					switch (action)
+					{
+						case "warn" | "warning": WARN;
+						case "err" | "error": ERROR;
+						case "ignore": IGNORE;
+						case _: null;						
+					}
+				case _: null;
+			};
+			
+			if (action == null)
+				Context.fatalError('Unknown @multipleOverwrites action: ' + param.toString(), param.pos);
+			
+			return action;
+		} else 
+			return ERROR;	//default
+	}
 		
 
 	/**
@@ -300,6 +337,17 @@ class Mixin
 	static function overwriteMethod(mixinFql:String, mf:Field, cf:Field)
 	{		
 
+		var wasOverwrittenByAnotherMixin = cf.meta.hasMetaWithName("overwrite");
+		if (wasOverwrittenByAnotherMixin)
+			switch (getMultipleOverwritesAction(cf))
+			{
+				case ERROR:
+					Context.fatalError('Two mixins overwriting the same method can cause undefined behaviour', cf.pos);
+				case WARN:
+					Context.warning('Two mixins overwriting the same method can cause undefined behaviour', cf.pos);
+				case IGNORE:				
+			};
+		
 		copyMeta(cf, mf);
 		
 		var baseFuncName = mixinFql.replace(".", "_").toLowerCase() + "_" + cf.name;
@@ -325,8 +373,9 @@ class Mixin
 		};		
 
 		searchAndReplace(mfunc.expr);
+		
 		//prepend basefunc
-		mfunc.expr = macro $b{[ baseFuncExpr, mfunc.expr ]};
+		MoreExprTools.prepend(mfunc.expr, baseFuncExpr);		
 		
 		//replace original
 		cf.replaceFFunFunction(mfunc);
