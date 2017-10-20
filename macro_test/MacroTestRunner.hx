@@ -9,6 +9,7 @@ typedef Test =
 	main:String,
 	name:String,
 	matcher:EReg,
+	?cmd:String,
 	?stderr:String,
 	?stdout:String
 	
@@ -42,6 +43,8 @@ class MacroTestRunner
 					Sys.println('OK');
 				else {
 					Sys.println('FAILED');
+					Sys.println('-- cmd: ');
+					Sys.println(test.cmd);
 					Sys.println('');
 					Sys.println('-- stdout:');
 					Sys.println(test.stdout);
@@ -58,17 +61,20 @@ class MacroTestRunner
 	
 	
 	static function runTest(test:Test)
-	{
-		var p = new Process("haxe", [
+	{		
+		var args = [
 			'extraParams.hxml', 
 			'-cp', 'lib', 
 			'-cp', 'macro_test', 
 			'-D', test.name,
 			'-main', test.main, 
-			'--interp']);
+			'--interp'];
+			
+		var p = new Process("haxe", args);
 
 		test.stderr = p.stderr.readAll().toString();
 		test.stdout = p.stdout.readAll().toString();
+		test.cmd = 'haxe ' + args.join(" ");
 
 		return test.matcher.match(test.stderr);		
 	}

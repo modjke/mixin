@@ -18,11 +18,7 @@ using StringTools;
 class Typer 
 {	
 	var module:String;
-	var imports:StringMap<{
-		pack: Array<String>,
-		name: String,
-		?sub: String
-	}>;
+	var imports:StringMap<TypePath>;
 	
 	public function new(subModule:String, imports:Array<ImportExpr>)
 	{
@@ -35,7 +31,14 @@ class Typer
 			var tp = parseTypePath(subModule);
 			
 			//trace(alias != null ? alias : tp.name, typePathToString(tp, false));
-			this.imports.set(alias != null ? alias : tp.name, { pack: tp.pack, name: tp.name, sub: tp.sub });
+			
+			alias = alias != null ? alias : tp.name;
+			
+			var existed = this.imports.get(alias);
+			if (existed != null && !Same.typePaths(existed, tp))					
+				throw 'Typer has already mapped ${alias} to ${typePathToString(tp, false)}'; //that should not happen, but im cautious 
+						
+			this.imports.set(alias, { pack: tp.pack, name: tp.name, sub: tp.sub });
 		}
 		
 		var modulePath = Path.withExtension(subModule.replace(".", "/"), "hx");
@@ -44,6 +47,7 @@ class Typer
 		for (cp in Context.getClassPath())
 		{
 			var dir = Path.join([cp, moduleDir]);
+
 			for (entry in FileSystem.readDirectory(dir))
 				if (Path.extension(entry) == "hx")
 				{
@@ -51,18 +55,6 @@ class Typer
 					var subModule = Path.withoutExtension(hxPath).replace("/", ".");
 					
 					addImport(subModule);
-										
-					for (t in Context.getModule(subModule))
-						switch (t)
-						{
-							case TInst(_.get() => t, params):
-								if (!this.imports.exists(t.name))
-								{
-									var subModule = t.module.endsWith(t.name) ? t.module : t.module + "." + t.name;
-									addImport(subModule);
-								}
-							case _:
-						}
 				}
 		}
 
@@ -235,8 +227,8 @@ class Typer
 		var expr:Expr = null;		
 		var pos:Position = field.pos;
 		
-		var typeStack = new TypeStack();
-		typeStack.pushLevel(TypeStack.levelFromFields(otherFields));
+		var typeStack = new VarStack();
+		typeStack.pushLevel(VarStack.levelFromFields(otherFields));
 		
 		switch (field.kind)
 		{
@@ -247,7 +239,7 @@ class Typer
 			case FFun(f):
 				expr = f.expr;
 				if (f.args != null)
-					typeStack.pushLevel(TypeStack.levelFromArgs(f.args));
+					typeStack.pushLevel(VarStack.levelFromArgs(f.args));
 		}
 		
 		if (expr != null)
@@ -321,21 +313,7 @@ class Typer
 				
 			}
 			
-			var debug = field.meta.hasMetaWithName("debug");
-			if (debug)
-			{
-				Context.warning('Printing debug data for method ${field.name} (remove @debug meta to disable)', field.pos);
-				Sys.println(field.name + " WAS:");
-				Sys.println(expr.toString());
-			}
-			
 			process(expr);
-			
-			if (debug)
-			{
-				Sys.println(field.name + " BECAME:");
-				Sys.println(expr.toString());
-			}
 			
 		}
 	}

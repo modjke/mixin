@@ -61,7 +61,6 @@ enum SomeEnum
 	{		
 		assertTrue(Type.getClassName(SomeOtherClass) == "cases.autoImports.SomeOtherClass");
 		assertTrue(Type.getClassName(cases.autoImports.SomeOtherClass) == "cases.autoImports.SomeOtherClass");
-		
 	}
 	
 	public function testSwitch():Void

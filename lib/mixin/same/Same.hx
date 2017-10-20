@@ -39,6 +39,15 @@ class Same
 			   arraysOfExpr(a.params, b.params);
 	}
 	
+	static function typePaths(a:TypePath, b:TypePath):Bool
+	{
+		return 	a.name == b.name &&
+				a.sub == b.sub &&
+				Same.stringArrays(a.pack, b.pack) &&
+				Same.typeParams(a.params, b.params);
+				
+	}
+	
 	static function access(a:Array<Access>, b:Array<Access>, ignore:Array<Access>)
 	{
 		var ac = a.copy().filter(function (a) return ignore.indexOf(a) == -1);

@@ -5,16 +5,16 @@ import haxe.macro.Expr.ComplexType;
 
 using haxe.macro.Tools;
 
-enum TypeDef {
+enum VarDef {
 	VAR(name:String, type:ComplexType);
 	METHOD(name:String, args:Array<FunctionArg>, ret:ComplexType);
 }
 
-class TypeStack 
+class VarStack 
 {
-	var stack:Array<Array<TypeDef>> = [];
+	var stack:Array<Array<VarDef>> = [];
 	
-	public static function levelFromFields(fields:Array<Field>):Array<TypeDef>
+	public static function levelFromFields(fields:Array<Field>):Array<VarDef>
 	{
 		return [
 			for (f in fields)
@@ -32,7 +32,7 @@ class TypeStack
 		];
 	}
 	
-	public static function levelFromArgs(args:Array<FunctionArg>):Array<TypeDef>
+	public static function levelFromArgs(args:Array<FunctionArg>):Array<VarDef>
 	{
 		return [
 			for (a in args)
@@ -62,7 +62,7 @@ class TypeStack
 		stack[stack.length - 1].push(VAR(name, type));
 	}
 	
-	public function pushLevel(?level:Array<TypeDef>)
+	public function pushLevel(?level:Array<VarDef>)
 	{
 		if (level == null) level = [];
 		stack.push(level);
@@ -73,44 +73,6 @@ class TypeStack
 		stack.pop();
 	}
 	
-	public function wrap(e:Expr)
-	{		
-		var exprs:Array<Expr> = [
-			for (level in stack)
-				for (def in level)
-				{
-					switch (def)
-					{
-						case VAR(name, type): 
-							{
-								expr: ExprDef.EVars([{
-									name: name,
-									type: type,
-									expr: null
-								}]),
-								pos: Context.currentPos()
-							}
-						case METHOD(name, args, ret): 
-							var expr = macro return null;
-							{							
-								expr: ExprDef.EFunction(name, {
-									args: args,
-									ret: ret,
-									expr: expr
-								}),
-								pos: Context.currentPos()
-							}
-					}
-				}
-		];
-				
-		
-		exprs.push(e);
-	
-		var out = macro $b{exprs};
-		return out;
-	}
-	
 	function traceStack()
 	{
 		for (level in stack)
@@ -119,7 +81,7 @@ class TypeStack
 		}
 	}
 	
-	function getDefName(def:TypeDef):String
+	function getDefName(def:VarDef):String
 	{
 		return switch(def)
 		{

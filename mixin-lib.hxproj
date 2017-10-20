@@ -29,7 +29,7 @@
   </build>
   <!-- haxelib libraries -->
   <haxelib>
-    <library name="compiletime:2.7.0" />
+    <!-- example: <library name="..." /> -->
   </haxelib>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>

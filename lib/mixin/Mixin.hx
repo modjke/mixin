@@ -9,7 +9,7 @@ import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
 import mixin.same.Same;
-import mixin.typer.TypeStack;
+import mixin.typer.VarStack;
 import mixin.typer.Typer;
 
 using haxe.macro.Tools;
@@ -52,7 +52,6 @@ class Mixin
 	@:noCompletion
 	public static function createMixin():Array<Field>
 	{	
-		
 		var lc = Context.getLocalClass().get();				
 		
 		if (!lc.isInterface) Context.fatalError('Mixin should be declared as interface', lc.pos);
@@ -70,9 +69,14 @@ class Mixin
 		var buildFields = Context.getBuildFields();
 		
 		#if display
+		
 			for (field in buildFields)
 			{				
 				Typer.prepareForDisplay(field);
+				
+				mixinFields.push(field);
+				if (field.isPublic() && !field.isConstructor())
+					interfaceFields.push(field.makeInterfaceField());
 			}
 			
 		#else
@@ -150,7 +154,7 @@ class Mixin
 			//cf - existing class field (can be null)
 		
 			var cf = fields.find(function (f) return f.name == mf.name);
-			
+						
 			#if display
 			
 			switch (getFieldMixinType(mf))
