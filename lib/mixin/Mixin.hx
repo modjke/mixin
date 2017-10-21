@@ -161,8 +161,6 @@ class Mixin
 		#if display
 			for (mf in cached.fields)
 			{
-			
-			
 				switch (getFieldMixinType(mf))
 				{
 					case MIXIN | OVERWRITE:
@@ -214,9 +212,11 @@ class Mixin
 							{
 								if (cf.isConstructor())
 									overwriteConstructor(mf, cf);
-								else {																
-									overwriteMethod(mixinFql, fields, mf, cf);
-									overwriteCache.set(mf.name, cf.name);
+								else {				
+									overwriteMethod(mixinFql, mf, cf);
+									overwriteCache.set(cf.name, mf.name);
+									
+									fields.push(mf);
 								}
 							} else 
 							{
@@ -241,9 +241,20 @@ class Mixin
 						{
 							case FFun(fun):
 								var debug = field.meta.hasMetaWithName("debug");
-								if (debug) 
+								if (debug) {
+									
 									Sys.println('-- debugging: ${field.name}');
+									Sys.println('-- before:');
+									Sys.println(fun.expr.toString());
+								}
+								
 								replaceBaseCalls(fun.expr, overwriteCache, debug);
+								
+								if (debug)
+								{
+									Sys.println('-- after:');
+									Sys.println(fun.expr.toString());
+								}
 							case _:
 						}
 					case _:
@@ -362,16 +373,15 @@ class Mixin
 		
 
 	/**
-	 * class method is transformed into function
-	 * mf code injected into cf with
-	 * base.method calls becoming function calls
+	 * Swaps implementations between mf and cf
+	 * mf becames original function and gets renamed	 
+	 * 
 	 * @param	mixinFql
 	 * @param	mf
 	 * @param	cf
 	 */
-	static function overwriteMethod(mixinFql:String, fields:Array<Field>, mf:Field, cf:Field)
+	static function overwriteMethod(mixinFql:String, mf:Field, cf:Field)
 	{		
-
 		var wasOverwrittenByAnotherMixin = cf.meta.hasMetaWithName("overwrite");
 		if (wasOverwrittenByAnotherMixin)
 			switch (getMultipleOverwritesAction(cf))
@@ -383,12 +393,16 @@ class Mixin
 				case IGNORE:				
 			};
 		
-		copyMeta(mf, cf);
+		copyMeta(cf, mf);
 		
-		var baseMethodName = mixinFql.replace(".", "_").toLowerCase() + "_" + cf.name;
-		cf.name = baseMethodName;
+		var mixinFunction = mf.extractFFunFunction();
+		var originalFunction = cf.extractFFunFunction();
 		
-		fields.push(mf);
+		mf.replaceFFunFunction(originalFunction);
+		cf.replaceFFunFunction(mixinFunction);
+		
+		mf.name = mixinFql.replace(".", "_").toLowerCase() + "_" + cf.name;
+
 	}
 	
 	static function overwriteConstructor(mf:Field, cf:Field)
@@ -458,21 +472,8 @@ class Mixin
 			}			
 		};		
 
-		if (debug)
-		{
-			Sys.println('-- before:');
-			Sys.println(expr.toString());
-		}
-		
 		searchAndReplace(expr);
-		
-		if (debug)
-		{
-			Sys.println('-- after:');
-			Sys.println(expr.toString());
-		}
-		
-		
+
 	}
 	
 	/**

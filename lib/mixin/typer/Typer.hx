@@ -17,22 +17,29 @@ using StringTools;
 
 class Typer 
 {	
+	inline static var DEBUG = false;
+	
 	var module:String;
 	var imports:StringMap<TypePath>;
 	
-	public function new(subModule:String, imports:Array<ImportExpr>)
+	public function new(module:String, imports:Array<ImportExpr>)
 	{
-		this.module = subModule;			
+		if (DEBUG) {
+			trace('--');
+			trace('Typer for $module:');
+		}
+		
+		this.module = module;			
 		
 		this.imports = new StringMap();		
 		
 		function addImport(subModule:String, ?alias:String)
 		{
-			var tp = parseTypePath(subModule);
+			var tp = parseTypePath(subModule);			
+			alias = alias != null ? alias : (tp.sub != null ? tp.sub : tp.name);
 			
-			//trace(alias != null ? alias : tp.name, typePathToString(tp, false));
-			
-			alias = alias != null ? alias : tp.name;
+			if (DEBUG) 
+				trace('adding ${typePathToString(tp, false)} as $alias');
 			
 			var existed = this.imports.get(alias);
 			if (existed != null && !Same.typePaths(existed, tp))					
@@ -41,7 +48,7 @@ class Typer
 			this.imports.set(alias, { pack: tp.pack, name: tp.name, sub: tp.sub });
 		}
 		
-		var modulePath = Path.withExtension(subModule.replace(".", "/"), "hx");
+		var modulePath = Path.withExtension(module.replace(".", "/"), "hx");
 		var moduleDir = Path.directory(modulePath);
 		
 		for (cp in Context.getClassPath())
@@ -347,7 +354,7 @@ class Typer
 		if (field == null) throw 'Class field should not be null';
 		
 		if (interf.name == field.name && 
-			Same.access(interf.access, field.access, [AOverride]))
+			Same.access(interf.access, field.access, [AOverride, AInline]))
 		{
 			var ap = interf.pos;
 			var bp = field.pos;
