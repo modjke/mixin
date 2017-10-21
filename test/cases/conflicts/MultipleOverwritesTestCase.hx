@@ -1,6 +1,5 @@
 package cases.conflicts;
 import haxe.unit.TestCase;
-import mixin.Base;
 
 class MultipleOverwritesTestCase extends TestCase
 {

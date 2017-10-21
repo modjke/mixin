@@ -8,6 +8,7 @@ import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
+import mixin.copy.Copy;
 import mixin.same.Same;
 import mixin.tools.MoreExprTools;
 import mixin.typer.VarStack;
@@ -180,6 +181,8 @@ class Mixin
 			{			
 				//mf - mixin field
 				//cf - existing class field (can be null)
+				mf = Copy.field(mf);
+				
 				var cf = fields.find(function (f) return f.name == mf.name);
 				
 				switch (getFieldMixinType(mf))
@@ -231,13 +234,16 @@ class Mixin
 				}
 			}
 			
-			for (f in fields)
-				switch (getFieldMixinType(f)) {
+			for (field in fields)
+				switch (getFieldMixinType(field)) {
 					case MIXIN | OVERWRITE:
-						switch (f.kind)
+						switch (field.kind)
 						{
-							case FFun(f):
-								replaceBaseCalls(f.expr, overwriteCache);
+							case FFun(fun):
+								var debug = field.meta.hasMetaWithName("debug");
+								if (debug) 
+									Sys.println('-- debugging: ${field.name}');
+								replaceBaseCalls(fun.expr, overwriteCache, debug);
 							case _:
 						}
 					case _:
@@ -383,12 +389,6 @@ class Mixin
 		cf.name = baseMethodName;
 		
 		fields.push(mf);
-		
-		if (mf.meta.hasMetaWithName("debug"))
-		{
-			Sys.println('Overwritten method $mixinFql > ${mf.name}:');
-			Sys.println(cf.extractFFunFunction().expr.toString());
-		}
 	}
 	
 	static function overwriteConstructor(mf:Field, cf:Field)
@@ -442,7 +442,7 @@ class Mixin
 		}
 	}
 	
-	static function replaceBaseCalls(expr:Expr, map:StringMap<String>)
+	static function replaceBaseCalls(expr:Expr, map:StringMap<String>, debug:Bool = false)
 	{
 		function searchAndReplace(e:Expr)
 		{			
@@ -458,7 +458,21 @@ class Mixin
 			}			
 		};		
 
+		if (debug)
+		{
+			Sys.println('-- before:');
+			Sys.println(expr.toString());
+		}
+		
 		searchAndReplace(expr);
+		
+		if (debug)
+		{
+			Sys.println('-- after:');
+			Sys.println(expr.toString());
+		}
+		
+		
 	}
 	
 	/**
