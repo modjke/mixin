@@ -50,8 +50,6 @@ class B implements Defaults
 
 @mixin interface Defaults
 {
-	
-	@debug 
 	@overwrite 
 	function setDefaults():Void
 	{		
