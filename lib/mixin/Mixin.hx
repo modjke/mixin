@@ -80,6 +80,7 @@ class Mixin
 		
 			for (field in buildFields)
 			{				
+				validateField(field);
 				Typer.prepareForDisplay(field);
 				
 				mixinFields.push(field);
@@ -93,7 +94,7 @@ class Mixin
 		
 			for (field in buildFields)
 			{				
-
+				validateField(field);
 				Typer.makeFieldTypeDeterminable(field);
 				
 				if (typer == null) 
@@ -292,6 +293,16 @@ class Mixin
 			case FFun(func):
 				if (func.expr == null) 
 					Context.fatalError('@overwrite method should have implementation (body)', f.pos);
+		}
+	}
+	
+	static function validateField(f:Field)
+	{		
+		if (f.access != null)
+		{
+			if (f.access.has(AStatic)) 	 Context.fatalError('Mixin: static fields are not supported', f.pos);
+			if (f.access.has(AOverride)) Context.fatalError('Mixin: override fields are not supported', f.pos);
+			if (f.access.has(AMacro)) 	 Context.fatalError('Mixin: macro fields are not supported', f.pos);	
 		}
 	}
 	
