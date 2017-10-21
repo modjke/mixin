@@ -1,6 +1,7 @@
 package;
 import cases.AutoImportsTestCase;
 import cases.CopyTest;
+import cases.ExtendingMixinsTestCase;
 import cases.OneMixinForSeveralClassesTestCase;
 import cases.OverwriteOverrideTestCase;
 import cases.conflicts.MultipleOverwritesTestCase;
@@ -22,6 +23,7 @@ class RunAll
 		runner.add(new OneMixinForSeveralClassesTestCase());
 		runner.add(new CopyTest());
 		runner.add(new OverwriteOverrideTestCase());
+		runner.add(new ExtendingMixinsTestCase());
 		
 		var success = runner.run();
 		

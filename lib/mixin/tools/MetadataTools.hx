@@ -1,4 +1,5 @@
 package mixin.tools;
+import haxe.macro.Expr;
 import haxe.macro.Expr.Metadata;
 import haxe.macro.Expr.MetadataEntry;
 
@@ -17,6 +18,11 @@ class MetadataTools
 		return meta != null ? meta.find(function (e) return e.name == name) : null;
 	}
 	
+	public static function cosumeParameters(meta:MetadataEntry, consumer:Expr->Bool)
+	{
+		if (meta.params != null)
+			meta.params = meta.params.filter(function invert(p) return !consumer(p));
+	}
 	
 	
 }

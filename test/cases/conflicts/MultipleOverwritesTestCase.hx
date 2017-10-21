@@ -43,7 +43,7 @@ class Object implements Mixin2 implements Mixin1
 		objectString = v;
 	}
 	
-	@multipleOverwrites("ignore")
+	@multipleOverwrites(IGNORE)
 	public function changeValue(v:String):Void
 	{
 		objectString = v;

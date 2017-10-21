@@ -64,7 +64,7 @@ class Object implements Mixin
 	function get_prop():String return "";
 	
 	@base public var baseProp(get, never):String;
-	@overwrite function get_baseProp():String {
+	@overwrite(inlineBase=true) function get_baseProp():String {
 		return "overwritten " + $base.get_baseProp();
 	}
 	

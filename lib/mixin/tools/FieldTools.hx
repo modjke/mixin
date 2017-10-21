@@ -2,6 +2,8 @@ package mixin.tools;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Field;
 
+using Lambda;
+
 class FieldTools 
 {
 
@@ -14,18 +16,8 @@ class FieldTools
 		}
 	}
 	
-	public static function isPublic(f:Field):Bool
-	{
-		return f.access.indexOf(APublic) > -1;
-	}
-	
-	public static function isPrivate(f:Field):Bool{
-		return !isPublic(f);
-	}
-	
 	public static function isConstructor(f:Field):Bool
 	{
-		// is that enough?
 		return f.name == "new";
 	}
 	
@@ -63,38 +55,14 @@ class FieldTools
 		};
 	}
 	
-	
-	/**
-	 * Removes access, initial values, FFun exprs and 
-	 * returns new valid interface field
-	 * 
-	 * @param	f
-	 * @return
-	 */
-	public static function makeInterfaceField(f:Field):Field
+	public static function makeInline(f:Field)
 	{
-		
-		var out:Field = {
-			name: f.name,
-			access: [],
-			kind: switch (f.kind)
-			{
-				case FVar(t, e): FVar(t, null);
-				case FFun(f): 
-					FFun({
-						args: f.args,
-						ret: f.ret,
-						params: f.params,
-						expr: null
-					});
-				case FProp(get, set, t, e): FProp(get, set, t, null);
-			},
-			doc: f.doc,
-			meta: f.meta,
-			pos: f.pos			
-		};
-		
-		return out;
+		if (f.access == null)
+			f.access = [AInline]
+		else if (!f.access.has(AInline))
+			f.access.push(AInline);
 	}
+	
+	
 	
 }

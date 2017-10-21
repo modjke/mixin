@@ -1,6 +1,8 @@
 package mixin.tools;
 import haxe.macro.Expr;
 
+using haxe.macro.Tools;
+
 class MoreExprTools 
 {
 
@@ -19,4 +21,15 @@ class MoreExprTools
 		}
 	}
 	
+	public static function getBoolValue(e:Expr):Null<Bool>
+	{
+		try {
+			var value = e.getValue();
+			if (Std.is(value, Bool)) 
+				return value;
+				
+		} catch (ignore:Dynamic) {}
+		
+		return null;
+	}
 }

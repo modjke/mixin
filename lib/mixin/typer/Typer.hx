@@ -94,6 +94,8 @@ class Typer
 	
 	public function resolveComplexTypesInField(field:Field)
 	{
+		makeFieldTypeDeterminable(field);
+		
 		var p = field.pos;
 		field.kind = switch (field.kind)
 		{
@@ -196,7 +198,7 @@ class Typer
 
 	}
 	
-	public static function makeFieldTypeDeterminable(f:Field)
+	static function makeFieldTypeDeterminable(f:Field)
 	{
 		switch (f.kind)
 		{
@@ -227,32 +229,16 @@ class Typer
 	}
 	
 	
-	
-	
-	public static function prepareForDisplay(f:Field)
-	{		
-		f.kind = switch (f.kind)
-		{
-			case FVar(t, _): FVar(t, null);
-			case FProp(get, set, t, _): FProp(get, set, t, null);
-			case FFun(f): 
-				FFun({
-					args: f.args,
-					ret: f.ret,
-					params: f.params,
-					expr: macro {}
-				});			
-		};
-	}
+
 	
 	// SOME HACKERY LEVEL SHIT RIGHT HERE
-	public function resolveComplexTypesInFieldExpr(field:Field, otherFields:Array<Field>)
+	public function resolveComplexTypesInFieldExpr(field:Field, allFields:Array<Field>)
 	{
 		var expr:Expr = null;		
 		var pos:Position = field.pos;
 		
 		var typeStack = new VarStack();
-		typeStack.pushLevel(VarStack.levelFromFields(otherFields));
+		typeStack.pushLevel(VarStack.levelFromFields(allFields));
 		
 		switch (field.kind)
 		{
@@ -362,6 +348,7 @@ class Typer
 			{
 				case [FFun(af), FFun(bf)]:
 
+			
 					Same.functionArgs(af.args, bf.args, this) &&
 					Same.complexTypes(af.ret, bf.ret, this) &&
 					Same.typeParamDecls(af.params, bf.params);												

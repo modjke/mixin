@@ -15,7 +15,7 @@ package cases;
 	#end
 	
 	#if test3
-	macro function notAllowed() {}
+	macro function notAllowed():String {}
 	#end
 }
 
