@@ -1,5 +1,6 @@
 package mixin;
 import haxe.macro.Context;
+import haxe.macro.Expr;
 import haxe.macro.Expr.Access;
 import haxe.macro.Expr.Field;
 import haxe.macro.Expr.Position;
@@ -8,16 +9,29 @@ import mixin.copy.Copy;
 import mixin.typer.Typer;
 
 using mixin.tools.MetadataTools;
+using mixin.tools.MoreExprTools;
+using StringTools;
 using Lambda;
 
 class MixinField 
 {
-	public var field(default, null):Field;
+	var field:Field;
 	
 	public var type(default, null):FieldMixinType;
 	
 	public var pos(get, null):Position;
 	inline function get_pos() return field.pos;
+	
+	public var debug(get, null):Bool;
+	inline function get_debug() return field.meta.hasMetaWithName("debug");
+	
+	public var isMethod(get, null):Bool;
+	inline function get_isMethod() 
+		return switch (field.kind)
+		{
+			case FFun(_): true;
+			case _: false;
+		};
 	
 	public var isPublic(get, null):Bool;
 	inline function get_isPublic() return hasAccess(APublic);
@@ -27,15 +41,40 @@ class MixinField
 	
 	public var name(get, null):String;
 	inline function get_name() return field.name;	
-
-	public function new(field:Field) 
+	
+	public var inlineBase(default, null):Bool = false;
+	
+	//only methods and constructors has implementation
+	public var implementation(get, null):Null<Expr>;
+	inline function get_implementation()
+		return switch (field.kind)
+		{
+			case FFun(f): f.expr;
+			case _: null;
+		}
+	
+	public var baseFieldName(default, null):Null<String>;
+	
+	public var mixinFql(default, null):String;
+	
+	public function new(mixinFql:String, field:Field) 
 	{
 		if (field == null) throw 'Supplied field is null';
 		
+		this.mixinFql = mixinFql;
 		this.field = field;
-		this.type = getFieldMixinType(field);
+		this.type = processFieldMeta();	
 		
-		validate();		
+		this.baseFieldName = switch (type) {
+			case OVERWRITE: '_' + mixinFql.replace(".", "_").toLowerCase() + '_${field.name}';
+			case BASE: field.name;
+			case MIXIN: null;
+		};
+		
+		if (hasAccess(AStatic))   Context.fatalError('Mixin: static fields are not supported', pos);
+		if (hasAccess(AOverride)) Context.fatalError('Mixin: override fields are not supported', pos);
+		if (hasAccess(AMacro)) 	  Context.fatalError('Mixin: macro fields are not supported', pos);	
+		
 	}
 	
 	public function mixin():Field
@@ -96,14 +135,6 @@ class MixinField
 		};
 	}
 	
-	function validate()
-	{
-		if (hasAccess(AStatic))   Context.fatalError('Mixin: static fields are not supported', pos);
-		if (hasAccess(AOverride)) Context.fatalError('Mixin: override fields are not supported', pos);
-		if (hasAccess(AMacro)) 	  Context.fatalError('Mixin: macro fields are not supported', pos);	
-		
-	}
-	
 	function hasAccess(a:Access) return field.access != null ? field.access.has(a) : false;
 	
 	function makeSureFieldCanBeBase()
@@ -154,8 +185,10 @@ class MixinField
 		}
 	}
 	
-	public static function getFieldMixinType(f:Field):FieldMixinType
+	function processFieldMeta():FieldMixinType
 	{		
+		var f = this.field;
+		
 		var mixin = f.meta.hasMetaWithName("mixin");
 		var base = f.meta.hasMetaWithName("base");
 		var ow = f.meta.hasMetaWithName("overwrite");		
@@ -165,7 +198,24 @@ class MixinField
 			case [false, false, false]: MIXIN;	//default
 			case [true,  false, false]: MIXIN;
 			case [false, true,  false]: BASE;
-			case [false, false, true ]: OVERWRITE;
+			case [false, false, true ]: 
+				f.meta.getMetaWithName("overwrite").cosumeParameters(function (p)
+				{
+					return switch (p.expr)
+					{
+						case EBinop(OpAssign, macro inlineBase, _.getBoolValue() => value):
+							if (value != null)
+								this.inlineBase = value;
+							else 
+								Context.fatalError('Invalid value for inlineBase', p.pos);
+							
+							true;
+						case _:
+							false;
+					}
+				});
+				
+				OVERWRITE;
 			case _: Context.fatalError('Multiple field mixin types are not allowed', f.pos);
 		}
 	}
