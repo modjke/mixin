@@ -80,7 +80,7 @@ class Mixin
 		
 			for (field in buildFields)
 			{				
-				var mf = new MixinField(field);
+				var mf = new MixinField(mixinFql, field);
 				mf.convertForDisplay();				
 				mixinFields.push(mf);
 				
@@ -219,7 +219,7 @@ class Mixin
 					case MIXIN | OVERWRITE:
 						var noConflicts = !fields.exists(function (f) return f.name == mf.name);
 						if (noConflicts)
-							fields.push(Copy.field(mf.field));
+							fields.push(mf.mixin());
 					
 					case _:
 				}
