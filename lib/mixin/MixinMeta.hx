@@ -13,13 +13,6 @@ enum FieldMixinType
 	OVERWRITE;
 }
 
-enum MultipleOverwritesAction
-{
-	ERROR;
-	WARN;
-	IGNORE;
-}
-
 typedef MixinFieldMeta = {
 	type: FieldMixinType,
 	ignoreBaseCalls: Bool,

@@ -9,12 +9,12 @@ package cases.stateMachine;
 	var state:T = null;
 	var pendingState:T = null;
 	
-	public function new()
+	@overwrite public function new()
 	{
 		$base();	
 	}
 	
-	function switchState(state:T)
+	function switchState(state:T):Void
 	{
 		pendingState = state;
 	}

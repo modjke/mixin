@@ -344,7 +344,7 @@ class Typer
 		{
 			var ap = interf.pos;
 			var bp = field.pos;
-			Context.
+			
 			return switch ([interf.kind,field.kind])
 			{
 				case [FFun(af), FFun(bf)]:

@@ -7,6 +7,7 @@ import cases.OverwriteOverrideTestCase;
 import cases.conflicts.MultipleOverwritesTestCase;
 import cases.MixinTestCase;
 import cases.OverwriteCase;
+import cases.stateMachine.StateMachineTestCase;
 import haxe.unit.TestRunner;
 
 
@@ -24,6 +25,7 @@ class RunAll
 		runner.add(new CopyTest());
 		runner.add(new OverwriteOverrideTestCase());
 		runner.add(new ExtendingMixinsTestCase());
+		runner.add(new StateMachineTestCase());
 		
 		var success = runner.run();
 		

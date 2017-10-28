@@ -8,7 +8,6 @@ import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
-import mixin.MixinMeta.MultipleOverwritesAction;
 import mixin.copy.Copy;
 import mixin.same.Same;
 import mixin.tools.MoreExprTools;
