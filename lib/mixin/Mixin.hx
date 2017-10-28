@@ -8,6 +8,7 @@ import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import haxe.macro.Type.VarAccess;
+import mixin.MixinMeta.MultipleOverwritesAction;
 import mixin.copy.Copy;
 import mixin.same.Same;
 import mixin.tools.MoreExprTools;
@@ -24,19 +25,6 @@ using StringTools;
 using Lambda;
 
 
-enum FieldMixinType
-{
-	MIXIN;
-	BASE;
-	OVERWRITE;
-}
-
-enum MultipleOverwritesAction
-{
-	ERROR;
-	WARN;
-	IGNORE;
-}
 
 typedef CachedMixin = {
 	fields:Array<MixinField>
@@ -146,16 +134,20 @@ class Mixin
 					{
 						//if has bodyyyy
 						case MIXIN | OVERWRITE:
-							if (mf.debug) {
+							if (mf.meta.debug) {
 								
 								Sys.println('-- debugging: ${mf.name}');
 								Sys.println('-- before:');
 								Sys.println(mf);
 							}
 							
-							replaceBaseCalls(mf.implementation, overwriteCache);
+							var baseCalls = replaceBaseCalls(mf.implementation, overwriteCache);
+							//if this method is OVERWRITE and not constructor and if not ignoring base calls and base method was not called then warn!
+							if (mf.type == OVERWRITE && !mf.isConstructor && !mf.meta.ignoreBaseCalls && baseCalls.indexOf(mf.name) == -1)
+								Context.warning('Not calling base method in @overwrite can cause undefined behaviour (add ignoreBaseCalls=true to suppress)', mf.pos);
+					
 							
-							if (mf.debug)
+							if (mf.meta.debug)
 							{
 								Sys.println('-- after:');
 								Sys.println(mf.implementation.toString());
@@ -297,40 +289,6 @@ class Mixin
 
 		return fields;
 	}
-		
-	
-	
-
-
-	static function getMultipleOverwritesAction(f:Field):MultipleOverwritesAction
-	{
-		var meta = f.meta.getMetaWithName("multipleOverwrites");
-		
-		var action:MultipleOverwritesAction = ERROR;	//default
-		if (meta != null)
-			meta.cosumeParameters(function (p)
-			{
-				return switch (p.expr)
-				{
-					case EConst(CIdent(_.toLowerCase() => a)):
-						switch (a)
-						{
-							case "warn" | "warning": action = WARN;
-							case "err" | "error": action = ERROR;
-							case "ignore": action = IGNORE;
-							case _:
-								Context.fatalError('Unknown @multipleOverwrites action: $a', p.pos);
-						}
-						true;
-					case _:
-						false;
-				}
-			});
-		
-		return action;
-
-	}
-		
 
 	/**
 	 * Creates copy of a mixin field
@@ -344,17 +302,6 @@ class Mixin
 	 */
 	static function overwriteMethod(mf:MixinField, cf:Field):Field
 	{		
-		var wasOverwrittenByAnotherMixin = cf.meta.hasMetaWithName("overwrite");
-		if (wasOverwrittenByAnotherMixin)
-			switch (getMultipleOverwritesAction(cf))
-			{
-				case ERROR:
-					Context.fatalError('Two mixins overwriting the same method can cause undefined behaviour', cf.pos);
-				case WARN:
-					Context.warning('Two mixins overwriting the same method can cause undefined behaviour', cf.pos);
-				case IGNORE:				
-			};
-		
 		var mixin = mf.mixin();
 		mixin.name = mf.baseFieldName;
 		
@@ -366,7 +313,7 @@ class Mixin
 		mixin.replaceFFunFunction(originalFunction);		
 		cf.replaceFFunFunction(mixinFunction);
 				
-		if (mf.inlineBase) {
+		if (mf.meta.inlineBase) {
 			mixin.makeInline();
 		}
 		
@@ -425,16 +372,19 @@ class Mixin
 		}
 	}
 	
-	static function replaceBaseCalls(expr:Expr, map:StringMap<String>)
+	//returns array of base calls replaced
+	static function replaceBaseCalls(expr:Expr, map:StringMap<String>):Array<String>
 	{
+		var baseCalls:Array<String> = [];
 		function searchAndReplace(e:Expr)
 		{			
 			switch (e.expr)
 			{				
 				case EField(_.expr => EConst(CIdent("$base")), field):		
-					if (map.exists(field))
+					if (map.exists(field)) {
+						baseCalls.push(field);
 						e.expr = EField(macro this, map.get(field));
-					else 
+					} else 
 						Context.fatalError('Unknown base field: ' + field, e.pos);
 				case _:
 					e.iter(searchAndReplace);
@@ -442,6 +392,8 @@ class Mixin
 		};		
 
 		searchAndReplace(expr);
+		
+		return baseCalls;
 
 	}
 	

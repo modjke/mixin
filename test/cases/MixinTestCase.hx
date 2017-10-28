@@ -77,7 +77,7 @@ class Object implements Mixin
 										
 	@mixin function mixinMethod():Void {}			//mixin method, raises exception if base already have it (default)
 	@base function baseMethod():Void;			//base must have this method, raises exception if base does not have it	
-	@overwrite function overwriteMethod():Void {}	//similar to base, but allows mixin method to overwrite base's method, 'base.method()' calls base method	
+	@overwrite(ignoreBaseCalls=true) function overwriteMethod():Void {}	//similar to base, but allows mixin method to overwrite base's method, 'base.method()' calls base method	
 	
 	
 	//constructor can be mixed in too

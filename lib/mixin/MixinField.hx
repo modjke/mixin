@@ -4,7 +4,8 @@ import haxe.macro.Expr;
 import haxe.macro.Expr.Access;
 import haxe.macro.Expr.Field;
 import haxe.macro.Expr.Position;
-import mixin.Mixin.FieldMixinType;
+import mixin.MixinMeta.FieldMixinType;
+import mixin.MixinMeta.MixinFieldMeta;
 import mixin.copy.Copy;
 import mixin.typer.Typer;
 
@@ -16,14 +17,13 @@ using Lambda;
 class MixinField 
 {
 	var field:Field;
+	public var meta(default, null):MixinFieldMeta;
 	
-	public var type(default, null):FieldMixinType;
+	public var type(get, null):FieldMixinType;
+	function get_type() return meta.type;
 	
 	public var pos(get, null):Position;
 	inline function get_pos() return field.pos;
-	
-	public var debug(get, null):Bool;
-	inline function get_debug() return field.meta.hasMetaWithName("debug");
 	
 	public var isMethod(get, null):Bool;
 	inline function get_isMethod() 
@@ -41,9 +41,7 @@ class MixinField
 	
 	public var name(get, null):String;
 	inline function get_name() return field.name;	
-	
-	public var inlineBase(default, null):Bool = false;
-	
+		
 	//only methods and constructors has implementation
 	public var implementation(get, null):Null<Expr>;
 	inline function get_implementation()
@@ -63,7 +61,7 @@ class MixinField
 		
 		this.mixinFql = mixinFql;
 		this.field = field;
-		this.type = processFieldMeta();	
+		this.meta = MixinMeta.consumeMixinFieldMeta(field);		
 		
 		this.baseFieldName = switch (type) {
 			case OVERWRITE: '_' + mixinFql.replace(".", "_").toLowerCase() + '_${field.name}';
@@ -184,40 +182,4 @@ class MixinField
 					Context.fatalError('@overwrite method should have implementation (body)', pos);
 		}
 	}
-	
-	function processFieldMeta():FieldMixinType
-	{		
-		var f = this.field;
-		
-		var mixin = f.meta.hasMetaWithName("mixin");
-		var base = f.meta.hasMetaWithName("base");
-		var ow = f.meta.hasMetaWithName("overwrite");		
-	
-		return switch [mixin, base, ow]
-		{
-			case [false, false, false]: MIXIN;	//default
-			case [true,  false, false]: MIXIN;
-			case [false, true,  false]: BASE;
-			case [false, false, true ]: 
-				f.meta.getMetaWithName("overwrite").cosumeParameters(function (p)
-				{
-					return switch (p.expr)
-					{
-						case EBinop(OpAssign, macro inlineBase, _.getBoolValue() => value):
-							if (value != null)
-								this.inlineBase = value;
-							else 
-								Context.fatalError('Invalid value for inlineBase', p.pos);
-							
-							true;
-						case _:
-							false;
-					}
-				});
-				
-				OVERWRITE;
-			case _: Context.fatalError('Multiple field mixin types are not allowed', f.pos);
-		}
-	}
-
 }

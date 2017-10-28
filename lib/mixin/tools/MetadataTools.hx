@@ -24,5 +24,14 @@ class MetadataTools
 			meta.params = meta.params.filter(function invert(p) return !consumer(p));
 	}
 	
-	
+	public static function consumeMetadata(meta:Metadata, consumer:MetadataEntry->Bool)
+	{
+		if (meta != null)
+		{
+			var i = meta.length;
+			while (i-- > 0)
+				if (consumer(meta[i]))
+					meta.remove(meta[i]);
+		}
+	}
 }
