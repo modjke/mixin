@@ -20,6 +20,7 @@ class Same
 	{	
 		return arrays(a, b, function(a, b)
 		{
+
 			return  a.name == b.name &&
 					a.opt == b.opt &&
 					metadatas(a.meta, b.meta) &&					
@@ -88,6 +89,9 @@ class Same
 	static function complexTypes(a:ComplexType, b:ComplexType, ?typer:Typer)
 	{		
 		//TODO: find a better way
+		//trace(a.safeToString() + " => " + typer.resolve(a).safeToString());
+		//trace(b.safeToString() + " => " + typer.resolve(b).safeToString());
+		//trace(typer.resolve(a).safeToString(), typer.resolve(b).safeToString());
 		return  typer != null ? 
 					typer.resolve(a).safeToString() == typer.resolve(b).safeToString() :
 					a.safeToString() == b.safeToString();

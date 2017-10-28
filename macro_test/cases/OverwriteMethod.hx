@@ -29,7 +29,7 @@ class OverwriteMethod implements Mixin
 	#end
 	
 	#if test2
-	@overwrite public function method(arg:Int = 0):Int 
+	@overwrite function method(arg:Int):Int 
 	{
 		return 0;		
 	}

@@ -1,4 +1,5 @@
 package mixin;
+import haxe.ds.StringMap;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Access;
@@ -8,9 +9,13 @@ import mixin.MixinMeta.FieldMixinType;
 import mixin.MixinMeta.MixinFieldMeta;
 import mixin.copy.Copy;
 import mixin.typer.Typer;
+import haxe.macro.Type;
+import mixin.typer.resolver.Resolve;
 
+using haxe.macro.Tools;
 using mixin.tools.MetadataTools;
 using mixin.tools.MoreExprTools;
+using mixin.tools.MoreComplexTypeTools;
 using StringTools;
 using Lambda;
 
@@ -52,19 +57,19 @@ class MixinField
 		}
 	
 	public var baseFieldName(default, null):Null<String>;
+		
+	public var mixin(default, null):Mixin;
 	
-	public var mixinFql(default, null):String;
-	
-	public function new(mixinFql:String, field:Field) 
+	public function new(mixin:Mixin, field:Field) 
 	{
-		if (field == null) throw 'Supplied field is null';
+		if (mixin == null || field == null) throw "Invalid arguments";
 		
-		this.mixinFql = mixinFql;
-		this.field = field;
+		this.mixin = mixin;
+		this.field = field;		
 		this.meta = MixinMeta.consumeMixinFieldMeta(field);		
-		
+
 		this.baseFieldName = switch (type) {
-			case OVERWRITE: '_' + mixinFql.replace(".", "_").toLowerCase() + '_${field.name}';
+			case OVERWRITE: '_' + mixin.fql.replace(".", "_").toLowerCase() + '_${field.name}';
 			case BASE: field.name;
 			case MIXIN: null;
 		};
@@ -75,9 +80,36 @@ class MixinField
 		
 	}
 	
-	public function mixin():Field
+	/**
+	 * Creates field for including into base class
+	 * @param	params
+	 * @return
+	 */
+	public function create(params:Array<Type>):Field
 	{
-		return Copy.field(field);
+		var copy = Copy.field(field);
+		if (params.length > 0) {
+			if (params.length != mixin.typeParams.length)
+				throw "Known typeParams length is different from supplied";
+				
+			var typeMap:StringMap<TypePath> = new StringMap();
+			for (i in 0...params.length) {
+				var complex = Context.toComplexType(params[i]);
+				typeMap.set(mixin.typeParams[i], complex.extractTypePath());
+			}
+				
+			function resolve(ct)
+			{
+				var type = Resolve.typePathToString(ct, true);
+				var mapped = typeMap.get(type);
+				return mapped != null ? mapped : ct;
+			}
+			
+			Resolve.complexTypesInField(copy, resolve);						
+			var names = mixin.fields.map(function (f) return f.name);
+			Resolve.complexTypesInFieldExpr(copy, names, resolve);
+		}
+		return copy;
 	}
 	
 	public function convertForDisplay()

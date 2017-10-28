@@ -42,7 +42,7 @@ class ABC implements MixinABC
 	
 }
 
-@mixin interface MixinB extends MixinA
+@mixin interface MixinB
 {
 	public var b:String;
 	

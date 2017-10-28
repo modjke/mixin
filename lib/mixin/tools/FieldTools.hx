@@ -63,6 +63,17 @@ class FieldTools
 			f.access.push(AInline);
 	}
 	
+	public static function makePrivate(f:Field)
+	{
+		if (f.access == null) 
+			f.access = [APrivate];
+		else {
+			f.access.remove(APublic);
+			if (!f.access.has(APrivate))
+				f.access.push(APrivate);
+		}
+		
+	}
 	
 	
 }

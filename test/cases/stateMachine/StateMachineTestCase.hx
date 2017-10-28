@@ -12,8 +12,10 @@ class StateMachineTestCase extends TestCase
 	
 	public function testStateMachine()
 	{
-		var gameObject = new GameObject();
+		var gameObject = new GameObject(IDLE);
 		gameObject.update();
+		
+		assertEquals(IDLE, gameObject.enteredState);
 	}
 	
 }
@@ -25,19 +27,27 @@ enum State
 	GAME_OVER;
 }
 
-class GameObject implements StateMachine<State>
+//mixin here is optional since we are not adding anything
+@mixin interface ConcreteStateMachine extends StateMachine<State>
+{
+	
+}
+
+class GameObject implements ConcreteStateMachine
 {	
-	public function new()
+	public var enteredState:State = null;
+	
+	public function new(initial:State)
 	{
-		switchState(IDLE);
+		switchState(initial);
 	}
 	
 	function enterState(state:State, ?exitState:State):Void	
 	{
-		
+		this.enteredState = state;
 	}
 	
-	function update()
+	public function update()
 	{
 		switch (this.updateState())
 		{
