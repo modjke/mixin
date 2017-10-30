@@ -27,10 +27,19 @@ enum State
 	GAME_OVER;
 }
 
+
 //mixin here is optional since we are not adding anything
-@mixin interface ConcreteStateMachine extends StateMachine<State>
+@mixin interface ConcreteStateMachine extends StateMachine2<State>
 {
 	
+}
+
+@mixin interface StateMachine2<T> extends StateMachine<T>
+{
+	public function getCurrentState():T
+	{
+		return this.state;
+	}
 }
 
 class GameObject implements ConcreteStateMachine

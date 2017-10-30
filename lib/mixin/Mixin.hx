@@ -116,7 +116,7 @@ class Mixin
 					
 				mf.validateMixinType();				
 				mixin.fields.push(mf);	
-				
+							
 				overwriteCache.set(mf.name, mf.baseFieldName);
 				
 				if (mf.isPublic && !mf.isConstructor)
