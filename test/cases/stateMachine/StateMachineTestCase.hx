@@ -2,6 +2,9 @@ package cases.stateMachine;
 import cases.stateMachine.StateMachineTestCase.State;
 import haxe.unit.TestCase;
 
+/**
+ * Test Mixin<T> and type params inheritance
+ */
 class StateMachineTestCase extends TestCase
 {
 
@@ -28,13 +31,7 @@ enum State
 }
 
 
-//mixin here is optional since we are not adding anything
-@mixin interface ConcreteStateMachine extends StateMachine2<State>
-{
-	
-}
-
-@mixin interface StateMachine2<T> extends StateMachine<T>
+@mixin interface StateMachine2<T,K> extends StateMachine<T,K>
 {
 	public function getCurrentState():T
 	{
@@ -42,7 +39,13 @@ enum State
 	}
 }
 
-class GameObject implements ConcreteStateMachine
+//mixin here is optional since we are not adding anything
+@mixin interface ConcreteStateMachine<K> extends StateMachine2<State, K>
+{
+	
+}
+
+class GameObject implements ConcreteStateMachine<Int>
 {	
 	public var enteredState:State = null;
 	

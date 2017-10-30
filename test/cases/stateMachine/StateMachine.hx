@@ -1,7 +1,7 @@
 package cases.stateMachine;
 
 
-@mixin interface StateMachine<T>
+@mixin interface StateMachine<T,K>
 {
 	@base function enterState(state:T, ?exitState:T):Void;
 	

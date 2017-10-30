@@ -1,9 +1,11 @@
 package mixin;
+import haxe.EnumTools;
 import haxe.ds.StringMap;
 import haxe.io.Output;
 import haxe.macro.ComplexTypeTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Printer;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
@@ -69,9 +71,9 @@ class Mixin
 		
 			for (field in buildFields)
 			{				
-				var mf = new MixinField(mixinFql, typeParams, field);
+				var mf = new MixinField(mixin, field);
 				mf.convertForDisplay();				
-				mixinFields.push(mf);
+				mixin.fields.push(mf);
 				
 				if (mf.isPublic && !mf.isConstructor)
 					interfaceFields.push(mf.createInterface());			
@@ -182,7 +184,7 @@ class Mixin
 			Context.fatalError("Can't include mixin into extern class", lc.pos);
 		
 		// if extending interface (or mixin) skip
-		if (lc.isInterface) 
+		if (lc.isInterface)
 			return null;	
 			
 		// error if mixin was included twice or more somewhere in hierarchy 		
@@ -198,8 +200,7 @@ class Mixin
 		var cached = mixins.get(mixinFql);
 		
 		//maps mixin fql -> [TypeParams]
-		var typeParamMap:StringMap<Array<Type>> = collectTypeParamMap(lc);
-		var typeParams = typeParamMap.get(mixinFql);
+		var typeParams:Array<Type> = traverseTypeParameters(lc, mixinFql);
 		
 		#if display
 			for (mf in cached.fields)
@@ -238,11 +239,9 @@ class Mixin
 					case BASE:
 						if (cf != null)
 						{
-							//if mixin field is public there is no need to check interface
-							//haxe will check it for us
-							//we have to check only private @:base fields
-							if (!mf.isPublic && !typer.satisfiesInterface(mixin, cf))
+							if (!typer.satisfiesInterface(mixin, cf))
 							{
+								trace(new Printer().printField(mixin));
 								Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
 								Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
 							}						
@@ -489,25 +488,58 @@ class Mixin
 			return null;
 	}
 	
-	static function collectTypeParamMap(lc:ClassType):StringMap<Array<Type>>
+	static function traverseTypeParameters(lc:ClassType, mixinFql:String):Array<Type>
 	{
-		var typeParamMap:StringMap<Array<Type>> = new StringMap();
-		
+		var inheritancePath:Array<{ t: ClassType, params: Array<Type> }> = [];
+		var found = false;
 		function traverse(interfaces:Array<{ t:Ref<ClassType>, params:Array<Type> }>) {
 			for (iface in interfaces) {					
-				var ct = iface.t.get();
-				var fql = getFqlClassName(ct);
 				
-				if (mixins.exists(fql))					
-					typeParamMap.set(fql, iface.params.copy());
+				
+				var ifaceClass = iface.t.get();
+				traverse(ifaceClass.interfaces);
+				
+				if (mixinFql == getFqlClassName(ifaceClass))
+					found = true;
 					
-				traverse(ct.interfaces);
+				if (found)
+				{
+					inheritancePath.push({
+						t: ifaceClass,
+						params: iface.params
+					});
+					break;
+				}
 			}
 		}
 		
 		traverse(lc.interfaces);
 		
-		return typeParamMap;		
+		if (!found) throw "Unable to traverse inheritance path to " + mixinFql;
+		
+		//trace('Path for '+ getFqlClassName(lc) + '/' + mixinFql +': ' + inheritancePath.map(function (ct) return ct.t.name).join(" -> "));
+		
+		var out:Array<Type> = null;
+		for (entry in inheritancePath)
+		{
+			var expected = entry.t.params;
+			var supplied = entry.params;
+			
+			//trace('Expected: ' + getFqlClassName(entry.t), expected);
+			//trace('Supplied: ' + getFqlClassName(entry.t), supplied);
+			if (out == null)
+				out = supplied.copy();
+			else {
+				for (e in expected)
+				{
+					for (i in 0...out.length)
+						if (out[i].toString() == e.t.toString())
+							out[i] = supplied[expected.indexOf(e)];
+				}
+			}
+		}
+		
+		return out;		
 	}
 	
 	

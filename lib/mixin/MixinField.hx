@@ -88,15 +88,19 @@ class MixinField
 	public function create(params:Array<Type>):Field
 	{
 		var copy = Copy.field(field);
+		
 		if (params.length > 0) {
 			if (params.length != mixin.typeParams.length)
 				throw "Known typeParams length is different from supplied";
-				
+					
 			var typeMap:StringMap<TypePath> = new StringMap();
 			for (i in 0...params.length) {
+
 				var complex = Context.toComplexType(params[i]);
 				typeMap.set(mixin.typeParams[i], complex.extractTypePath());
 			}
+			
+			//for (k in typeMap.keys()) trace(k + ' -> ' + Resolve.typePathToString(typeMap.get(k), true));
 				
 			function resolve(ct)
 			{
