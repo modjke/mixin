@@ -6,11 +6,142 @@ import haxe.macro.Expr.Field;
 import haxe.macro.Expr.TypePath;
 
 using haxe.macro.Tools;
-
+using mixin.tools.MoreComplexTypeTools;
 
 class Resolve 
 {
+	public static function typeParamsInField(field:Field, resolve:TypePath->ComplexType)
+	{
+		field.kind = switch (field.kind)
+		{
+			case FVar(t, e): 
+				FVar(typeParam(t, resolve), e);				
+			case FProp(get, set, t, e):
+				FProp(get, set, typeParam(t, resolve), e);
+			case FFun(f):			
+				for (a in f.args) a.type = typeParam(a.type, resolve);
+				f.ret = typeParam(f.ret, resolve);
+				FFun(f);
+		}
+	}
+	
+	static function typeParam(type:ComplexType, resolve:TypePath->ComplexType)
+	{
+		if (type == null) 
+			return null;
+					
+		var resolved = switch (type)
+		{
+			case TPath( p ): 
+				typeParamInTypeParams(p.params, resolve);
+				
+				resolve(p);
+				
+			case TFunction( args , ret  ):
+				TFunction ( [ for (t in args) typeParam(t, resolve) ], typeParam(ret, resolve) );
+				
+			case TAnonymous( fields ):
+				for (f in fields) typeParamsInField (f, resolve);
+				
+				TAnonymous ( fields );
+				
+			case TParent( t ):
+				TParent(typeParam(t, resolve));
+				
+			case TExtend( p , fields  ):
+				for (f in fields) typeParamsInField (f, resolve);
+				for (t in p) typeParamInTypeParams(t.params, resolve);
+				
+				TExtend( p, fields ); 	
+				
+			case TOptional( t ):
+				TOptional( typeParam(t, resolve) );
+		}
+		
+		return resolved != null ? resolved : type;
+	}
+	
+	static function typeParamInTypeParams(params:Array<TypeParam>, resolve:TypePath->ComplexType)
+	{
+		if (params != null)		
+			for (i in 0...params.length) {				
+				switch (params[i])
+				{
+					case TPType(t): params[i] = TPType(typeParam(t, resolve));
+					case _: // 
+				}
+			};		
+		
+	}
 
+	public static function typeParamsInFieldExpr(field:Field, fields:Array<String>, resolveTypeParam:TypePath->ComplexType)
+	{		
+		var pos:Position = field.pos;	
+		var expr = switch (field.kind)
+		{
+			case FVar(t, e): e;
+			case FProp(get, set, t, e): e;				
+			case FFun(f): f.expr;				
+		}
+		
+		if (expr != null)
+		{			
+			function process(e:Expr)
+			{
+				try {			
+					if (e != null)
+						switch (e.expr)
+						{
+							case EVars(vars):
+								for (v in vars)
+								{								
+									v.type = typeParam(v.type, resolveTypeParam);
+									
+									process(v.expr);
+								}
+
+							case EFunction(name, f):
+								for (a in f.args) {
+									a.type = typeParam(a.type, resolveTypeParam);
+									process(a.value);
+								}
+								
+								f.ret = typeParam(f.ret, resolveTypeParam);
+								process(f.expr);
+							
+							case ETry(e, catches):
+								for (c in catches)
+									c.type = typeParam(c.type, resolveTypeParam);
+							
+							case ECast( _e, t ):
+								process(_e);
+								e.expr = ECast(_e, typeParam(t, resolveTypeParam));
+							
+							case ECheckType ( _e, t ):
+								process(_e);
+								e.expr = ECheckType(_e, typeParam(t, resolveTypeParam));
+								
+							case _:
+								e.iter(process);
+						
+						}
+					
+					
+				} catch (exception:Dynamic)
+				{				
+					trace(e);
+					
+					Context.fatalError("Exception while resolving types: " + Std.string(exception), e.pos);
+				}
+				
+				
+			}
+			
+			process(expr);
+			
+		}
+	}
+	
 	public static function complexTypesInField(field:Field, resolveTypePath:TypePath->TypePath)
 	{		
 		inline function resolve(t:ComplexType):ComplexType return complexType(t, resolveTypePath);
@@ -28,7 +159,7 @@ class Resolve
 		}		
 	}
 	
-	// SOME HACKERY LEVEL SHIT RIGHT HERE
+	// TODO: does not look robust
 	public static function complexTypesInFieldExpr(field:Field, fields:Array<String>, resolveTypePath:TypePath->TypePath)
 	{
 		var expr:Expr = null;		
@@ -101,7 +232,14 @@ class Resolve
 									
 									process(v.expr);
 								}
-								
+							
+							case ETry(e, catches):
+								process(e);
+								for (c in catches) {									
+									c.type = complexType(c.type, resolveTypePath);
+									
+									process(c.expr);
+								}
 								
 							case EConst(CIdent(s)):
 								
@@ -112,6 +250,8 @@ class Resolve
 									
 									e.expr = Context.parse(typePathToString(tp, false), e.pos).expr;								
 								} 
+							
+							
 							case _:
 								e.iter(process);
 						
@@ -135,6 +275,7 @@ class Resolve
 	
 	
 	
+	
 	public static function complexType(type:ComplexType, map:TypePath->TypePath):ComplexType
 	{
 		if (type == null) 
@@ -143,6 +284,7 @@ class Resolve
 		return switch (type)
 		{
 			case TPath( p ):	
+				complexTypeInTypeParams(p.params, map);
 				TPath(map(p));
 				
 			case TFunction( args , ret  ):
@@ -158,6 +300,7 @@ class Resolve
 				
 			case TExtend( p , fields  ):
 				for (f in fields) complexTypesInField (f, map);
+				for (t in p) complexTypeInTypeParams(t.params, map);
 				
 				TExtend( [ for (t in p) map(t) ], fields ); 	
 				
@@ -166,6 +309,18 @@ class Resolve
 		}
 	}
 	
+	static function complexTypeInTypeParams(params:Array<TypeParam>, resolve:TypePath->TypePath)
+	{
+		if (params != null)		
+			for (i in 0...params.length) {				
+				switch (params[i])
+				{
+					case TPType(t): params[i] = TPType(complexType(t, resolve));
+					case _: // 
+				}
+			};		
+		
+	}
 
 	
 	public static function parseTypePath(s:String):TypePath

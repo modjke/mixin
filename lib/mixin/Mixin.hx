@@ -241,7 +241,6 @@ class Mixin
 						{
 							if (!typer.satisfiesInterface(mixin, cf))
 							{
-								trace(new Printer().printField(mixin));
 								Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
 								Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
 							}						

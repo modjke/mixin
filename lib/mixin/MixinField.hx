@@ -93,25 +93,25 @@ class MixinField
 			if (params.length != mixin.typeParams.length)
 				throw "Known typeParams length is different from supplied";
 					
-			var typeMap:StringMap<TypePath> = new StringMap();
+			var typeMap:StringMap<ComplexType> = new StringMap();
 			for (i in 0...params.length) {
 
 				var complex = Context.toComplexType(params[i]);
-				typeMap.set(mixin.typeParams[i], complex.extractTypePath());
+				typeMap.set(mixin.typeParams[i], complex);
 			}
 			
-			//for (k in typeMap.keys()) trace(k + ' -> ' + Resolve.typePathToString(typeMap.get(k), true));
+			//for (k in typeMap.keys()) trace(k + ' -> ' + typeMap.get(k).safeToString());
 				
-			function resolve(ct)
-			{
-				var type = Resolve.typePathToString(ct, true);
+			function resolve(tp:TypePath):ComplexType
+			{				
+				var type = Resolve.typePathToString(tp, true);
 				var mapped = typeMap.get(type);
-				return mapped != null ? mapped : ct;
+				return mapped;
 			}
 			
-			Resolve.complexTypesInField(copy, resolve);						
+			Resolve.typeParamsInField(copy, resolve);						
 			var names = mixin.fields.map(function (f) return f.name);
-			Resolve.complexTypesInFieldExpr(copy, names, resolve);
+			Resolve.typeParamsInFieldExpr(copy, names, resolve);
 		}
 		return copy;
 	}
