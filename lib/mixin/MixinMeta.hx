@@ -2,10 +2,6 @@ package mixin;
 import haxe.macro.Context;
 import haxe.macro.Expr.Field;
 
-using mixin.tools.MetadataTools;
-using mixin.tools.MoreExprTools;
-using haxe.macro.Tools;
-
 enum FieldMixinType
 {
 	MIXIN;

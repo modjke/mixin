@@ -12,13 +12,6 @@ import mixin.typer.Typer;
 import haxe.macro.Type;
 import mixin.typer.resolver.Resolve;
 
-using haxe.macro.Tools;
-using mixin.tools.MetadataTools;
-using mixin.tools.MoreExprTools;
-using mixin.tools.MoreComplexTypeTools;
-using StringTools;
-using Lambda;
-
 class MixinField 
 {
 	var field:Field;
@@ -104,7 +97,7 @@ class MixinField
 				
 			function resolve(tp:TypePath):ComplexType
 			{				
-				var type = Resolve.typePathToString(tp, true);
+				var type = tp.toString(true);
 				var mapped = typeMap.get(type);
 				return mapped;
 			}

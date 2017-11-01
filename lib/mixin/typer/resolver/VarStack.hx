@@ -3,9 +3,6 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.ComplexType;
 
-using haxe.macro.Tools;
-
-
 class VarStack 
 {
 	var stack:Array<Array<String>> = [];

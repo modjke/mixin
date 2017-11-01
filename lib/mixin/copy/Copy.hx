@@ -8,8 +8,6 @@ import haxe.macro.Expr.Position;
 import haxe.macro.ExprTools.ExprArrayTools;
 import haxe.macro.Type.FieldKind;
 
-using haxe.macro.Tools;
-
 class Copy 
 {
 

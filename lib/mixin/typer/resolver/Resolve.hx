@@ -4,9 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.Expr.ComplexType;
 import haxe.macro.Expr.Field;
 import haxe.macro.Expr.TypePath;
-
-using haxe.macro.Tools;
-using mixin.tools.MoreComplexTypeTools;
+import mixin.same.Same;
 
 class Resolve 
 {
@@ -19,6 +17,27 @@ class Resolve
 			case FProp(get, set, t, e):
 				FProp(get, set, typeParam(t, resolve), e);
 			case FFun(f):			
+				var localTypeParams = collectTypeParams(f);
+				if (localTypeParams.length > 0)
+				{
+					if (f.params != null)
+						for (p in f.params)
+							if (p.constraints != null)
+								for (i in 0...p.constraints.length)
+									p.constraints[i] = typeParam(p.constraints[i], resolve);
+						
+					inline function isLocal(tp:TypePath):Bool {
+						return localTypeParams.exists(function (itp) return Same.typePaths(tp, itp));
+					}
+					
+					function resolveIfNotLocal(tp:TypePath):ComplexType {
+						return !isLocal(tp) ? resolve(tp) : null;
+					}
+					
+					resolve = resolveIfNotLocal;
+					
+				}
+				
 				for (a in f.args) a.type = typeParam(a.type, resolve);
 				f.ret = typeParam(f.ret, resolve);
 				FFun(f);
@@ -29,7 +48,8 @@ class Resolve
 	{
 		if (type == null) 
 			return null;
-					
+			
+
 		var resolved = switch (type)
 		{
 			case TPath( p ): 
@@ -81,7 +101,22 @@ class Resolve
 		{
 			case FVar(t, e): e;
 			case FProp(get, set, t, e): e;				
-			case FFun(f): f.expr;				
+			case FFun(f): 
+				var localTypeParams = collectTypeParams(f);
+				if (localTypeParams.length > 0)
+				{	
+					inline function isLocal(tp:TypePath):Bool {
+						return localTypeParams.exists(function (itp) return Same.typePaths(tp, itp));
+					}
+					
+					function resolveIfNotLocal(tp:TypePath):ComplexType {
+						return !isLocal(tp) ? resolveTypeParam(tp) : null;
+					}
+					
+					resolveTypeParam = resolveIfNotLocal;
+				}
+				
+				f.expr;				
 		}
 		
 		if (expr != null)
@@ -110,6 +145,7 @@ class Resolve
 								process(f.expr);
 							
 							case ETry(e, catches):
+								process(e);
 								for (c in catches)
 									c.type = typeParam(c.type, resolveTypeParam);
 							
@@ -154,6 +190,12 @@ class Resolve
 				FProp(get, set, resolve(t), e);
 			case FFun(f):			
 				for (a in f.args) a.type = resolve(a.type);
+				if (f.params != null)
+					for (p in f.params)
+						if (p.constraints != null)
+							for (i in 0...p.constraints.length)
+								p.constraints[i] = resolve(p.constraints[i]);
+								
 				f.ret = resolve(f.ret);
 				FFun(f);
 		}		
@@ -215,10 +257,10 @@ class Resolve
 					
 								if (!varStack.hasVarNamed(eStr) && looksLikeClassOrClassSub(eStr))
 								{
-									var tp = parseTypePath(eStr);
+									var tp = eStr.toTypePath();
 									tp = resolveTypePath(tp);
 									
-									var newExpr = Context.parse(typePathToString(tp, false), e.pos);
+									var newExpr = Context.parse(tp.toString(false), e.pos);
 									e.expr = EField(newExpr, f);								
 								} else 
 									process(expr);
@@ -233,22 +275,37 @@ class Resolve
 									process(v.expr);
 								}
 							
+							case EFunction(name, f):
+								for (a in f.args) {
+									a.type = complexType(a.type, resolveTypePath);
+									process(a.value);
+								}
+								
+								f.ret = complexType(f.ret, resolveTypePath);
+								process(f.expr);
+							
 							case ETry(e, catches):
 								process(e);
-								for (c in catches) {									
+								for (c in catches)
 									c.type = complexType(c.type, resolveTypePath);
-									
-									process(c.expr);
-								}
+							
+							case ECast( _e, t ):
+								process(_e);
+								e.expr = ECast(_e, complexType(t, resolveTypePath));
+							
+							case ECheckType ( _e, t ):
+								process(_e);
+								e.expr = ECheckType(_e, complexType(t, resolveTypePath));
+							
 								
 							case EConst(CIdent(s)):
 								
 								if (!varStack.hasVarNamed(s) && looksLikeClassOrClassSub(s))
 								{
-									var tp = parseTypePath(s);
+									var tp = s.toTypePath();
 									tp = resolveTypePath(tp);
 									
-									e.expr = Context.parse(typePathToString(tp, false), e.pos).expr;								
+									e.expr = Context.parse(tp.toString(false), e.pos).expr;								
 								} 
 							
 							
@@ -322,41 +379,21 @@ class Resolve
 		
 	}
 
-	
-	public static function parseTypePath(s:String):TypePath
+	static function collectTypeParams(f:Function):Array<TypePath>
 	{
-		var pack = s.split(".");
-		var hasSub = pack.length > 1 && ~/\b[A-Z]/.match(pack[pack.length - 2]);
-		var sub = hasSub ? pack.pop() : null;
-		var name = pack.pop();
-		if (name.indexOf("<") != -1) throw "Parsing type path with type parameters is not implemented";
+		var out:Array<TypePath> = [];
 		
-		return {
-			pack: pack,
-			sub: sub,
-			name: name
-		}
+		if (f.params != null)
+			for (p in f.params) {
+				out.push(p.name.toTypePath());
+				
+				if (p.params != null && p.params.length > 0)
+					throw 'TypeParamDecl with params not supported';
+			}
+		
+		return out;
 	}
 	
-	public static function typePathToString(tp:TypePath, includeTypeParams:Bool)
-	{
-		var str = tp.pack.join(".") + (tp.pack.length > 0 ? "." + tp.name : tp.name);
-		if (tp.sub != null) str += "." + tp.sub;
-		if (includeTypeParams && tp.params != null && tp.params.length > 0)
-		{
-			str += "<" + tp.params.map(typeParamToString).join(",") + ">";
-		}
-		
-		return str;
-	}	
-	
-	static function typeParamToString(tp:TypeParam)
-	{
-		return switch(tp) {
-			case TPType(ct): ct.toString();
-			case TPExpr(e): e.toString();
-		}
-	}
 	
 	
 	// true if string looks like Class and Class.Sub

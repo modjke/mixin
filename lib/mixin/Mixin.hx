@@ -17,15 +17,6 @@ import mixin.tools.MoreExprTools;
 import mixin.typer.resolver.VarStack;
 import mixin.typer.Typer;
 
-using haxe.macro.Tools;
-using mixin.tools.MoreComplexTypeTools;
-using mixin.tools.FieldTools;
-using mixin.tools.MetadataTools;
-using mixin.tools.MoreExprTools;
-
-using StringTools;
-using Lambda;
-
 
 class Mixin 
 {

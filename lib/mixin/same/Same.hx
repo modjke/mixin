@@ -10,9 +10,6 @@ import haxe.macro.Expr.TypeParam;
 import haxe.macro.Expr.TypeParamDecl;
 import mixin.typer.Typer;
 
-using haxe.macro.Tools;
-using mixin.tools.MoreComplexTypeTools;
-
 @:publicFields
 class Same 
 {
@@ -42,6 +39,12 @@ class Same
 	
 	static function typePaths(a:TypePath, b:TypePath):Bool
 	{
+		//comparing two TypePaths assumes that params is never null
+		//even though it is declared as @:optional
+		//also TypePathTools.toTypePath relies on  that assumption
+		if (a.params == null) throw "Probably an invalid TypePath (a)";
+		if (b.params == null) throw "Probably an invalid TypePath (b)";
+		
 		return 	a.name == b.name &&
 				a.sub == b.sub &&
 				Same.stringArrays(a.pack, b.pack) &&

@@ -10,12 +10,6 @@ import mixin.same.Same;
 import mixin.typer.resolver.Resolve;
 import sys.FileSystem;
 
-using haxe.macro.Tools;
-using mixin.tools.MoreComplexTypeTools;
-using mixin.tools.FieldTools;
-using mixin.tools.MetadataTools;
-using StringTools;
-
 class Typer 
 {	
 	inline static var DEBUG = false;
@@ -36,15 +30,15 @@ class Typer
 		
 		function addImport(subModule:String, ?alias:String)
 		{
-			var tp = Resolve.parseTypePath(subModule);			
+			var tp = subModule.toTypePath();
 			alias = alias != null ? alias : (tp.sub != null ? tp.sub : tp.name);
 			
 			if (DEBUG) 
-				trace('$alias => ${Resolve.typePathToString(tp, false)}');
+				trace('$alias => ${tp.toString(false)}');
 			
 			var existed = this.imports.get(alias);
 			if (existed != null && !Same.typePaths(existed, tp))					
-				throw 'Typer has already mapped ${alias} to ${Resolve.typePathToString(tp, false)}'; //that should not happen, but im cautious 
+				throw 'Typer has already mapped ${alias} to ${tp.toString(false)}'; //that should not happen, but im cautious 
 						
 			this.imports.set(alias, { pack: tp.pack, name: tp.name, sub: tp.sub });
 		}

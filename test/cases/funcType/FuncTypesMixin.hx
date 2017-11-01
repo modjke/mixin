@@ -27,14 +27,24 @@ typedef SomeTypedTypedef<T> = {
 		return this.value;
 	}
 	
-	/*
+	
+	
 	public function anotherType<T>(p:T):T
 	{
-		return p;
+		var k:T = p;
+		return k;
 	}
-	*/
+	 
+	public function getComplexFunction():Void->T
+	{
+		return function ()
+		{
+			return this.value;
+		};
+	}
 	
-	function getComplex(index:Int):{ value:T, index: Int }
+	
+	public function getComplex(index:Int):{ value:T, index: Int }
 	{
 		var out: { value: T, index: Int } = {
 			value: getValue(),

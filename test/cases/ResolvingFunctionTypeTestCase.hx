@@ -2,7 +2,6 @@ package cases;
 import cases.funcType.FuncTypesMixin;
 import haxe.unit.TestCase;
 
-
 class ResolvingFunctionTypeTestCase extends TestCase 
 	implements FuncTypesMixin<Void->Int>
 {
@@ -12,14 +11,25 @@ class ResolvingFunctionTypeTestCase extends TestCase
 		super();
 	}
 	
-	public function test()
+	public function testMixinTypeParam()
 	{
-		setValue(getInt);
-		assertEquals(0, getValue()());
+		var testValue = 1000;
+		function getTestValue() return testValue;
+		
+		setValue(getTestValue);
+		assertEquals(testValue, getValue()());
+		
+		var complex = getComplex(5);
+		assertEquals(5, complex.index);
+		assertEquals(testValue, complex.value());
+		
+		var complexFunction = getComplexFunction();
+		assertEquals(testValue, complexFunction()());
 	}
 	
-	function getInt():Int
+	public function testInnerFunctioWithTypeParam()
 	{
-		return 0;
+		var string = "hey, it's a string!";
+		assertEquals(string, this.anotherType(string));
 	}
 }
