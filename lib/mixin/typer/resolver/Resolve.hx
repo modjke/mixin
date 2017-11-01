@@ -94,7 +94,7 @@ class Resolve
 		
 	}
 
-	public static function typeParamsInFieldExpr(field:Field, fields:Array<String>, resolveTypeParam:TypePath->ComplexType)
+	public static function typeParamsInFieldExpr(field:Field, resolveTypeParam:TypePath->ComplexType)
 	{		
 		var pos:Position = field.pos;	
 		var expr = switch (field.kind)

@@ -78,7 +78,7 @@ class MixinField
 	 * @param	params
 	 * @return
 	 */
-	public function create(params:Array<Type>):Field
+	public function create(params:Array<Type>, forDisplay:Bool):Field
 	{
 		var copy = Copy.field(field);
 		
@@ -103,8 +103,11 @@ class MixinField
 			}
 			
 			Resolve.typeParamsInField(copy, resolve);						
-			var names = mixin.fields.map(function (f) return f.name);
-			Resolve.typeParamsInFieldExpr(copy, names, resolve);
+			if (!forDisplay) 
+			{
+				var names = mixin.fields.map(function (f) return f.name);
+				Resolve.typeParamsInFieldExpr(copy, resolve);
+			}
 		}
 		return copy;
 	}

@@ -45,7 +45,26 @@ class Mixin
 		if (Context.getLocalUsing().length > 0) Context.fatalError('Mixins module with usings are not supported', lc.pos);
 
 		var typeParams = lc.params.map(function (tp) return tp.name);
-		var mixin = new Mixin(getFqlClassName(lc), typeParams);
+		var baseExtends:Array<String> = [];		
+		var baseImplements:Array<String> = []; 
+				
+		lc.meta.get().consumeMetadata(function (meta)
+		{
+			switch (meta.name)
+			{
+				case "baseExtends":
+					baseExtends = consumeFqlsFromMetaArgs(meta);
+					lc.meta.remove(meta.name);				
+				case "baseImplements":	
+					baseImplements = consumeFqlsFromMetaArgs(meta);
+					lc.meta.remove(meta.name);
+				case _:
+			}
+			
+			return true;
+		});
+		
+		var mixin = new Mixin(getFqlClassName(lc), typeParams, baseExtends, baseImplements);
 		
 		if (!mixins.exists(mixin.fql))
 			mixins.set(mixin.fql, mixin);
@@ -190,6 +209,31 @@ class Mixin
 		var fields = Context.getBuildFields();
 		var cached = mixins.get(mixinFql);
 		
+		for (shouldImplement in cached.baseImplements)
+		{
+			if (!lc.interfaces.exists(function (iface)
+			{
+				return getFqlClassName(iface.t.get()) == shouldImplement;
+			})) Context.fatalError('Mixin $mixinFql requires base class to implement $shouldImplement', lc.pos);
+		}
+		
+		for (shouldExtend in cached.baseExtends)
+		{
+			var satisfies = false;
+			
+			var superLc:ClassType = lc;
+			while (superLc != null)
+				if (getFqlClassName(superLc) == shouldExtend) {					
+					satisfies = true;
+					break;
+				} else 
+					superLc = getSuperClass(superLc);
+			
+			if (!satisfies)
+				Context.fatalError('Mixin $mixinFql requires base class to extend $shouldExtend', lc.pos);
+		}
+		
+		
 		//maps mixin fql -> [TypeParams]
 		var typeParams:Array<Type> = traverseTypeParameters(lc, mixinFql);
 		
@@ -201,7 +245,7 @@ class Mixin
 					case MIXIN | OVERWRITE:
 						var noConflicts = !fields.exists(function (f) return f.name == mf.name);
 						if (noConflicts)
-							fields.push(mf.create(typeParams));
+							fields.push(mf.create(typeParams, true));
 					
 					case _:
 				}
@@ -219,7 +263,7 @@ class Mixin
 
 				var cf = fields.find(function (f) return f.name == mf.name);
 				
-				var mixin = mf.create(typeParams);	//basically a field copy, do whatever you want with it
+				var mixin = mf.create(typeParams, false);	//basically a field copy, do whatever you want with it
 				switch (mf.type)
 				{
 					case MIXIN:
@@ -472,10 +516,16 @@ class Mixin
 	
 	static function getSuperClass(lc:ClassType):Null<ClassType>
 	{
-		if (lc.superClass != null && lc.superClass.t != null && lc.superClass.t.get() != null)
+		if (lc.superClass != null)
 			return lc.superClass.t.get();
 		else
 			return null;
+	}
+	
+	static function getSuperClassRef(lcRef:Ref<ClassType>):Ref<ClassType>
+	{
+		var lc = lcRef != null ? lcRef.get() : null;
+		return (lc != null && lc.superClass != null) ? lc.superClass.t : null;
 	}
 	
 	static function traverseTypeParameters(lc:ClassType, mixinFql:String):Array<Type>
@@ -532,15 +582,43 @@ class Mixin
 		return out;		
 	}
 	
+	static function consumeFqlsFromMetaArgs(meta:MetadataEntry):Array<String>
+	{
+		var out = [];
+		meta.cosumeParameters(function (expr)
+		{
+			try {
+				
+				switch (Context.getType(expr.toString()))
+				{
+					case TInst(t, params):
+						out.push( getFqlClassName(t.get()) );					
+					case _ => value:
+						throw 'Invalid class or interface type: $value';						
+				}
+			} catch (any:Any) {
+				Context.fatalError(Std.string(any), meta.pos);
+			}
+			
+			return true;
+		});
+		return out;
+	}
+	
 	
 	/* non static */
-	public var fields(default, null):Array<MixinField> = [];
 	public var fql(default, null):String;
+	public var fields(default, null):Array<MixinField>;	
 	public var typeParams(default, null):Array<String>;
+	public var baseImplements(default, null):Array<String>;
+	public var baseExtends(default, null):Array<String>;
 	
-	public function new(fql:String, typeParams:Array<String>)
+	public function new(fql:String, typeParams:Array<String>, baseExtends:Array<String>, baseImplements:Array<String>)
 	{
 		this.fql = fql;
-		this.typeParams = typeParams;
+		this.fields = [];
+		this.typeParams = typeParams;		
+		this.baseExtends = baseExtends;		
+		this.baseImplements = baseImplements;
 	}
 }

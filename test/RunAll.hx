@@ -5,6 +5,7 @@ import cases.ExtendingMixinsTestCase;
 import cases.OneMixinForSeveralClassesTestCase;
 import cases.OverwriteOverrideTestCase;
 import cases.ResolvingFunctionTypeTestCase;
+import cases.ShouldExtendImplementTestCase;
 import cases.conflicts.MultipleOverwritesTestCase;
 import cases.MixinTestCase;
 import cases.OverwriteCase;
@@ -28,6 +29,7 @@ class RunAll
 		runner.add(new ExtendingMixinsTestCase());
 		runner.add(new StateMachineTestCase());
 		runner.add(new ResolvingFunctionTypeTestCase());
+		runner.add(new ShouldExtendImplementTestCase());
 		
 		var success = runner.run();
 		
