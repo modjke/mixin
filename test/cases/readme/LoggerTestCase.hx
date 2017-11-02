@@ -13,6 +13,7 @@ class LoggerTestCase extends TestCase
 	{
 		var a = new A();
 		var b = new B();
+		assertEquals(0, 0);
 	}
 	
 }
@@ -29,12 +30,12 @@ class LoggerTestCase extends TestCase
 
 class A implements Logger {
     public function new() {
-        log("called A constructor");
+        //log("called A constructor");
     }
 }
 
 class B implements Logger {
     public function new() {
-        log("called B constructor");
+       // log("called B constructor");
     }
 }
