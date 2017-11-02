@@ -35,7 +35,11 @@ class B implements Logger {
 ```
 
 Logger mixin adds ```private var loggingEnabled``` and ```public function log``` to every base class without need to extend it.
-Also mixin's public field will become interface fields so casting to mixin ```var logger:Logger = new A()``` is possible.
+Also mixin's public field will become interface fields so casting to mixin and calling them is possible:
+```haxe
+var logger:Logger = new A(); 
+logger.log("Hey");
+```
 
 
 ## Features
