@@ -1,10 +1,14 @@
-# Mixins for haxe 
+﻿# Mixins for haxe [(lib.haxe.org/p/mixin)](http://lib.haxe.org/p/mixin)
 Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4  
 * *haxe 4.0 will be supported after a stable release*  
 * *PRs/bug reports/feature requests are welcomed*
 
 [![Build Status](https://travis-ci.org/modjke/mixin.svg?branch=master)](https://travis-ci.org/modjke/mixin)
 
+## Installation
+ * Haxelib version: ```haxelib install mixin``` and ```-lib mixin```
+ * Git version: clone into your project and add to your hxml ```-cp mixin/lib``` and ```mixin/extraParams.hxml```
+ 
 ## How to use
  1. Declare your mixin as interface with ```@mixin``` meta
  2. Inlcude mixins into your class by adding ```implements Mixin```
@@ -15,22 +19,22 @@ Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4
 @mixin interface Logger {
 	var loggingEnabled:Bool = true;
 	public function log(message:String):Void {
-    	if (loggingEnabled)
-        	trace(message);
-    }
+		if (loggingEnabled)
+			trace(message);
+	}
 }
 
 class A implements Logger {
 	public function new() {
-    	log("called A constructor");
-    }
+		log("called A constructor");
+	}
 }
 
 class B implements Logger {
 	public function new() {
-    	loggingEnabled = false;
-    	log("called B constructor");
-    }
+		loggingEnabled = false;
+		log("called B constructor");
+	}
 }
 ```
 
@@ -49,22 +53,22 @@ logger.log("Hey");
 ```haxe
 @mixin interface Mixin {
 	public function callBase():Void {
-    	base();
-    }
-    
-    function mixin():Void {
-    	trace("mixin() called");
-    }
+		base();
+	}
+
+	function mixin():Void {
+		trace("mixin() called");
+	}
 }
 
 class Object implements Mixin {
 	public function callMixin() {
-    	this.mixin();
-    }
-    
-    function base() {
-    	trace("base() called");
-    }
+		this.mixin();
+	}
+
+	function base() {
+		trace("base() called");
+	}
 }
 ```
 Since including above mixin inside a class that have no base() method will result in compile-time error it is possible to require base class to have that method, keep reading :)
@@ -94,15 +98,15 @@ Since including above mixin inside a class that have no base() method will resul
 ```haxe
 class Object implements Mixin {
 	public function foo(arg:Int):Void {
-    	//do something
-    }
+		//do something
+	}
 }
 @mixin interface Mixin {
 	@overwrite public function foo(arg:Int):Void {
-    	//do smth
-    	$base.foo(arg);		//call base class method
-        //do more
-    }
+		//do smth
+		$base.foo(arg);		//call base class method
+		//do more
+	}
 }
 ```
 
@@ -114,18 +118,18 @@ class Object implements Mixin {
 ```haxe
 class Object implements VeryNastyMixin {
 	var foo(default, set):Int;
-    function set_foo(v:Int):Int {
-    	return foo = v;
-    }
+	function set_foo(v:Int):Int {
+		return foo = v;
+	}
 }
 @mixin interface VeryNastyMixin {
 	// declaring base property is optional
-	@base var foo(default, set):Int;	
-    
+	@base var foo(default, set):Int;
+	
 	@overwrite function set_foo(v:Int):Int {   
-    	v = Std.int(Math.random() * 1000);
-    	return $base.set_foo(v);
-    }
+		v = Std.int(Math.random() * 1000);
+		return $base.set_foo(v);
+	}
 }
 ```
 
@@ -137,15 +141,15 @@ class Object implements VeryNastyMixin {
 ```haxe
 class Object implements Mixin {
 	public function new() {
-    	trace(mixinVar);	// traces "initialized"
-    }
+		trace(mixinVar);	// traces "initialized"
+	}
 }
 @mixin interface Mixin {
 	var mixinVar:String;
 	@overwrite public function new() {
-    	mixinVar = "initialized";
-    	$base();
-    }
+		mixinVar = "initialized";
+		$base();
+	}
 }
 ```
 
@@ -171,18 +175,18 @@ class JohnWick implements KeanuReeves implements Driver implements Killer {}
 ```haxe
 class Object implements Collection<String> {
 	function createItem():String return "Item!";
-    
-    public function new() {
-    	createCollection(100);
-    }
+	
+	public function new() {
+		createCollection(100);
+	}
 }
 @mixin interface Collection<T> {    
-    @base function createItem():T;
-        
-   	var collection:Array<T>;
+	@base function createItem():T;
+
+	var collection:Array<T>;
 	public function createCollection(count:Int) {
-    	collection = [for (i in 0...count) createItem()];
-    }
+		collection = [for (i in 0...count) createItem()];
+	}
 }
 ```
 
@@ -195,7 +199,7 @@ class Object implements Collection<String> {
 
 ## Lincese
 Copyright (c) 2017 Ignatiev Mikhail (https://github.com/modjke) <ignatiev.work@gmail.com>
-	
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy  
 of this software and associated documentation files (the "Software"), to deal  
