@@ -9,8 +9,8 @@
 	"contributors": [
 		"modjke"
 	],
-	"releasenote": "",
-	"version": "0.9.1",
+	"releasenote": "readme.md to be rendered properly on lib.haxe.org",
+	"version": "0.9.2",
 	"url": "https://github.com/modjke/mixin",
 	"dependencies": {		
 	}

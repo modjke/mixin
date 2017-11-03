@@ -6,12 +6,12 @@ Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4
 [![Build Status](https://travis-ci.org/modjke/mixin.svg?branch=master)](https://travis-ci.org/modjke/mixin)
 
 ## Installation
- * Haxelib version: ```haxelib install mixin``` and ```-lib mixin```
- * Git version: clone into your project and add to your hxml ```-cp mixin/lib``` and ```mixin/extraParams.hxml```
+ * Haxelib version: `haxelib install mixin` and `-lib mixin`
+ * Git version: clone into your project and add to your hxml `-cp mixin/lib` and `mixin/extraParams.hxml`
  
 ## How to use
- 1. Declare your mixin as interface with ```@mixin``` meta
- 2. Inlcude mixins into your class by adding ```implements Mixin```
+ 1. Declare your mixin as interface with `@mixin` meta
+ 2. Inlcude mixins into your class by adding `implements Mixin`
 
 ### Obligatory logger example
 
@@ -38,7 +38,7 @@ class B implements Logger {
 }
 ```
 
-Logger mixin adds ```private var loggingEnabled``` and ```public function log``` to every base class without need to extend it.
+Logger mixin adds `private var loggingEnabled` and `public function log` to every base class without need to extend it.
 Also mixin's public field will become interface fields so casting to mixin and calling them is possible:
 ```haxe
 var logger:Logger = new A(); 
@@ -74,9 +74,9 @@ class Object implements Mixin {
 Since including above mixin inside a class that have no base() method will result in compile-time error it is possible to require base class to have that method, keep reading :)
 
 ##### Base class requirements 
-* ```@base``` field meta to require base class to have that field implemented (private or public) (no function body required)
-* ```@baseExtends(superClass)``` mixin meta to make sure base class extends superClass
-* ```@baseImplements(interface1, interface2, ...)``` mixin meta to make sure base class implements certain interfaces
+* `@base` field meta to require base class to have that field implemented (private or public) (no function body required)
+* `@baseExtends(superClass)` mixin meta to make sure base class extends superClass
+* `@baseImplements(interface1, interface2, ...)` mixin meta to make sure base class implements certain interfaces
 ```haxe
 // base should extend flash.display.DisplayObject
 @baseExtends(flash.display.DisplayObject)
@@ -90,10 +90,10 @@ Since including above mixin inside a class that have no base() method will resul
 ```
 ##### Overwriting base methods
 
-* Overwrite any base class method by adding ```@overwrite``` meta
-* To call overwritten base method use ```$base.method()```
-* ```$base.method()``` gets inlined by default (multiple returns is not allowed) - ```@overwrite(inlineBase=false)``` to disable
-* Not calling base method will trigger an error, add ```@overwrite(ignoreBaseCalls=true)``` to suppress
+* Overwrite any base class method by adding `@overwrite` meta
+* To call overwritten base method use `$base.method()`
+* `$base.method()` gets inlined by default (multiple returns is not allowed) - `@overwrite(inlineBase=false)` to disable
+* Not calling base method will trigger an error, add `@overwrite(ignoreBaseCalls=true)` to suppress
 * *Multiple mixins can overwrite the same method, if one of them is not calling base method behaviour is undefined*
 ```haxe
 class Object implements Mixin {
@@ -113,7 +113,7 @@ class Object implements Mixin {
 ##### Overwriting getters / setters
 
 * Overwriting getters and setters is similar to overwriting methods
-* Overwriting getter or setter for ```@:isVar``` field is not allowed
+* Overwriting getter or setter for `@:isVar` field is not allowed
 
 ```haxe
 class Object implements VeryNastyMixin {
@@ -136,7 +136,7 @@ class Object implements VeryNastyMixin {
 ##### Overwriting constructor
 
 * Constructor can be overwritten to perform some mixin initialisation
-* Similar to overwriting methods but base constructor can be called only once as ```$base()```
+* Similar to overwriting methods but base constructor can be called only once as `$base()`
 * Overwriting constructors with return statements is not supported
 ```haxe
 class Object implements Mixin {
@@ -157,10 +157,13 @@ class Object implements Mixin {
 
 * Mixins can extend other mixins (that merges them together)
 * Interfaces can extend mixins (to alias certain collection of mixins)
-* One mixin can be included in the 'extends' hierarchy only once
+* One mixin can be included in the hierarchy only once
 
 ```haxe
-@mixin interface Actor {}
+@mixin interface Human {}
+@mixin interface Handsome {}
+@mixin interface Talanted {}
+@mixin interface Actor extends Human extends Talanted extends Handsome {}
 @mixin interface KeanuReeves extends Actor {}
 @mixin interface Driver {}
 @mixin interface Killer {}
@@ -170,7 +173,7 @@ class JohnWick implements KeanuReeves implements Driver implements Killer {}
 ##### Typed mixins
 
 * Typed mixins are very cool! :)
-* Typed methods (function\<T\>) and constraints on type parameters are supported too.
+* Typed methods (`function\<T\>`) and constraints on type parameters are supported too.
 
 ```haxe
 class Object implements Collection<String> {
@@ -193,7 +196,7 @@ class Object implements Collection<String> {
 ## Limitations
 * All mixin fields should be explicitly typed (same applies to base class fields if they declared as @base or @overwrite in a mixin)
 * All @base & @overwrite methods should have the same arg names/arg types/arg defaults/return type as a base method
-* Using ```using``` for mixin module is not supported
+* Using `using` for mixin module is not supported
 * Importing static functions is not supported
 * import.hx is not *yet* supported (that said everything would work if you have the same import.hx for mixin and base class module, but in that case your mixin will depend on import.hx location)
 
