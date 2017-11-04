@@ -28,9 +28,9 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Field;
 import haxe.macro.Printer;
+import mixin.io.CachedFS;
 import mixin.same.Same;
 import mixin.typer.resolver.Resolve;
-import sys.FileSystem;
 
 class Typer 
 {	
@@ -72,8 +72,8 @@ class Typer
 		{
 			var dir = Path.join([cp, moduleDir]);
 
-			if (FileSystem.exists(dir) && FileSystem.isDirectory(dir))
-				for (entry in FileSystem.readDirectory(dir))
+			if (CachedFS.exists(dir) && CachedFS.isDirectory(dir))
+				for (entry in CachedFS.readDirectory(dir))
 					if (Path.extension(entry) == "hx")
 					{
 						var hxPath = Path.join([moduleDir, entry]);
