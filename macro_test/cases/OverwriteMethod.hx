@@ -1,6 +1,6 @@
 //-test1-/Field <method> does not satisfy @overwrite mixin interface/
 //-test2-/Field <method> does not satisfy @overwrite mixin interface/
-//-test3-/@overwrite mixin method <missing> not found in (.+), method will be included!/
+//-test3-/@overwrite mixin method <missing> not found in (.+)/
 package cases;
 
 class OverwriteMethod implements Mixin

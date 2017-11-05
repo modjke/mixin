@@ -9,6 +9,7 @@ import cases.ShouldExtendImplementTestCase;
 import cases.conflicts.MultipleOverwritesTestCase;
 import cases.MixinTestCase;
 import cases.OverwriteCase;
+import cases.constructor.ConstructorTestCase;
 import cases.readme.LoggerTestCase;
 import cases.stateMachine.StateMachineTestCase;
 import haxe.unit.TestRunner;
@@ -32,6 +33,7 @@ class RunAll
 		runner.add(new ResolvingFunctionTypeTestCase());
 		runner.add(new ShouldExtendImplementTestCase());
 		runner.add(new LoggerTestCase());
+		runner.add(new ConstructorTestCase());
 		
 		var success = runner.run();
 		

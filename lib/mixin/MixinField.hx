@@ -152,6 +152,8 @@ class MixinField
 		};	
 	}
 	
+	
+	
 	public function validateMixinType()
 	{
 		switch (type)
@@ -180,6 +182,28 @@ class MixinField
 					});
 				case FProp(get, set, t, e):
 					FProp(get, set, Copy.complexType(t), null);
+			},
+			doc: field.doc,
+			meta: Copy.metadata(field.meta),
+			pos: field.pos			
+		};
+	}
+	
+	public function createEmptyBaseMethod():Field
+	{
+		return {
+			name: baseFieldName,
+			access: field.access.copy(),
+			kind: switch (field.kind)
+			{
+				case FFun(f): 
+					FFun({
+						args: Copy.arrayOfFunctionArg(f.args),
+						ret: Copy.complexType(f.ret),
+						params: Copy.arrayOfTypeParamDecl(f.params),
+						expr: macro return null
+					});
+				case _: throw "Only FFun is supported";
 			},
 			doc: field.doc,
 			meta: Copy.metadata(field.meta),

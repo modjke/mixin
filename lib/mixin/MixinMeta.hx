@@ -35,7 +35,8 @@ typedef MixinFieldMeta = {
 	type: FieldMixinType,
 	ignoreBaseCalls: Bool,
 	inlineBase: Bool,
-	debug: Bool
+	debug: Bool,
+	addIfAbsent: Bool
 }
 
 class MixinMeta 
@@ -46,6 +47,7 @@ class MixinMeta
 			type: MIXIN,
 			ignoreBaseCalls: false,
 			inlineBase: false,
+			addIfAbsent: false,
 			debug: false
 		};
 		
@@ -77,7 +79,10 @@ class MixinMeta
 								out.inlineBase = value.getBoolValue();
 								if (out.inlineBase == null)
 									Context.fatalError('Invalid value for inlineBase', expr.pos);		
-									
+							case macro addIfAbsent = $value:
+								out.addIfAbsent = value.getBoolValue();
+								if (out.addIfAbsent == null)
+									Context.fatalError('Invalid value for addIfAbsent', expr.pos);
 							case _:	
 								Context.fatalError('Unknown parameter for @overwrite: ${expr.toString()}', meta.pos);
 						}

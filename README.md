@@ -90,10 +90,11 @@ Since including above mixin inside a class that have no base() method will resul
 ```
 ##### Overwriting base methods
 
-* Overwrite any base class method by adding `@overwrite` meta
+* Overwrite any base class method by adding `@overwrite([ignoreBaseCalls = false], [inlineBase = false], [addIfAbsent = false])` meta
 * To call overwritten base method use `$base.method()`
-* `$base.method()` gets inlined by default (multiple returns is not allowed) - `@overwrite(inlineBase=false)` to disable
-* Not calling base method will trigger an error, add `@overwrite(ignoreBaseCalls=true)` to suppress
+* You can inline `$base.method()` call by setting `inlineBase=true`
+* Calling $base method is mandatory, `ignoreBaseCalls=true` to make it optional
+* Overwriting non-existent base method will trigger an error by default, `addIfAbsent=true` to supress
 * *Multiple mixins can overwrite the same method, if one of them is not calling base method behaviour is undefined*
 ```haxe
 class Object implements Mixin {

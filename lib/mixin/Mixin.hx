@@ -62,7 +62,7 @@ class Mixin
 	{	
 		var lc = Context.getLocalClass().get();				
 		
-		if (!isMixin(lc)) Context.fatalError('Mixin should be declared as interface', lc.pos);
+		if (!declaredProperly(lc)) Context.fatalError('Mixin should be declared as non-extern interface with @mixin meta present', lc.pos);
 		
 		if (Context.getLocalUsing().length > 0) Context.fatalError('Mixins module with usings are not supported', lc.pos);
 
@@ -256,7 +256,6 @@ class Mixin
 		}
 		
 		
-		//maps mixin fql -> [TypeParams]
 		var typeParams:Array<Type> = traverseTypeParameters(lc, mixinFql);
 		
 		#if display
@@ -274,8 +273,7 @@ class Mixin
 			}
 		#else 
 			var overwriteCache = new StringMap<String>();
-			
-			
+
 			var typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
 			
 			for (mf in cached.fields)
@@ -310,7 +308,7 @@ class Mixin
 							
 							if (typer.satisfiesInterface(mixin, cf))
 							{
-								if (cf.isConstructor()) {
+								if (mf.isConstructor) {
 											
 									overwriteConstructor(mixin, cf);
 								} else {				
@@ -335,10 +333,22 @@ class Mixin
 								Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
 							}
 							
-						} else {								
-							fields.push(mixin);
+						} else {		
 							
-							Context.warning('@overwrite mixin method <${mf.name}> not found in ${classFql}, method will be included!', lc.pos);						
+							if (mf.meta.addIfAbsent) {
+								
+								if (mf.isConstructor)
+									removeBaseConstructorCalls(mixin);
+								else {
+									var mockBase = mf.createEmptyBaseMethod();
+									mockBase.makePrivate();
+									mockBase.makeInline();
+									fields.push(mockBase);
+								}
+								
+								fields.push(mixin);							
+							} else 
+								Context.fatalError('@overwrite mixin method <${mf.name}> not found in ${classFql} (@overwrite(addIfAbsent=true) to add anyway)', lc.pos);						
 						}
 						
 						
@@ -384,8 +394,7 @@ class Mixin
 		}
 		
 		searchForReturn(baseFunc.expr);
-		
-		
+	
 		var injected = false;
 		function searchAndReplace(e:Expr)
 		{			
@@ -436,6 +445,27 @@ class Mixin
 
 	}
 	
+	static function removeBaseConstructorCalls(field:Field)
+	{
+		function searchAndRemove(expr:Expr)
+		{
+			switch (expr)
+			{
+				case macro $base():
+					expr.expr = EBlock([]);
+				case _:
+					expr.iter(searchAndRemove);
+			}
+		}
+		
+		switch (field.kind)
+		{
+			case FFun(f): searchAndRemove(f.expr);
+			case _: throw "Only FFun is supported";
+		}		
+	}
+	
+	
 	/**
 	 * Check if anywhere in the hierarchy mixin was already included		 
 	 * @param	base
@@ -466,9 +496,7 @@ class Mixin
 		base.meta.add(includedMeta(mixinFql), [], base.pos);
 	}
 	
-	
-	
-	
+
 	
 	/**
 	 * Copies meta from class field (cf) to mixin field (mf)
@@ -531,7 +559,7 @@ class Mixin
 					}
 	}
 	
-	static function isMixin(lc:ClassType):Bool
+	static function declaredProperly(lc:ClassType):Bool
 	{
 		return lc.isInterface && !lc.isExtern && lc.meta.has("mixin");
 	}
