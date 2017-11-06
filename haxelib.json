@@ -9,7 +9,7 @@
 	"contributors": [
 		"modjke"
 	],
-	"releasenote": "inlineBase = false by default, addIfAbsent for @overwrite, consistent @overwrite behaviour for constructors and methods",
+	"releasenote": "inlineBase = false by default, addIfAbsent for @overwrite (auto override if super has that field), consistent @overwrite behaviour for constructors and methods",
 	"version": "0.9.3",
 	"url": "https://github.com/modjke/mixin",
 	"dependencies": {		

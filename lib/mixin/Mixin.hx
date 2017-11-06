@@ -21,22 +21,14 @@ SOFTWARE.
 */
 
 package mixin;
-import haxe.EnumTools;
 import haxe.ds.StringMap;
-import haxe.io.Output;
-import haxe.macro.ComplexTypeTools;
 import haxe.macro.Context;
 import haxe.macro.Expr;
-import haxe.macro.Printer;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
-import haxe.macro.Type.VarAccess;
-import mixin.copy.Copy;
 import mixin.same.Same;
-import mixin.tools.MoreExprTools;
-import mixin.typer.resolver.VarStack;
 import mixin.typer.Typer;
 
 
@@ -209,8 +201,7 @@ class Mixin
 	@:noCompletion
 	public static function includeMixin(mixinFql:String):Array<Field>
 	{
-		var lc = Context.getLocalClass().get();		
-		
+		var lc = Context.getLocalClass().get();				
 		//can't add mixin to an extern
 		if (lc.isExtern) 
 			Context.fatalError("Can't include mixin into extern class", lc.pos);
@@ -281,8 +272,9 @@ class Mixin
 				//mf - mixin field
 				//cf - existing class field (can be null)
 
-				var cf = fields.find(function (f) return f.name == mf.name);
 				
+				
+				var cf = fields.find(function (f) return f.name == mf.name);
 				var mixin = mf.create(typeParams, false);	//basically a field copy, do whatever you want with it
 				switch (mf.type)
 				{
@@ -335,18 +327,33 @@ class Mixin
 							
 						} else {		
 							
+							fields.push(mixin);	
+							
 							if (mf.meta.addIfAbsent) {
 								
-								if (mf.isConstructor)
-									removeBaseConstructorCalls(mixin);
-								else {
-									var mockBase = mf.createEmptyBaseMethod();
+								var hasSuperClass = getSuperClass(lc) != null;
+								if (mf.isConstructor) {
+									if (hasSuperClass)
+										replaceBaseConstructorCallsWithSuper(mixin)
+									else 
+										removeBaseConstructorCalls(mixin);									
+								} else {
+									
+									var overridden = fieldExistsInHierarchy(lc, mf.name);
+									var mockBase = mf.createEmptyBaseMethod(overridden);
 									mockBase.makePrivate();
-									mockBase.makeInline();
+									
+									if (!overridden) 
+										mockBase.makeInline();
+									
 									fields.push(mockBase);
+									
+									if (overridden) 
+										mixin.makeOverride();
+										
 								}
 								
-								fields.push(mixin);							
+														
 							} else 
 								Context.fatalError('@overwrite mixin method <${mf.name}> not found in ${classFql} (@overwrite(addIfAbsent=true) to add anyway)', lc.pos);						
 						}
@@ -354,14 +361,8 @@ class Mixin
 						
 				}
 			}
-			
-			
-				
-			
 		#end
 		
-		
-
 		return fields;
 	}
 	
@@ -445,13 +446,17 @@ class Mixin
 
 	}
 	
+	/**
+	 * Removes $base(arg1...) calls (replaces it with empty blocks
+	 * @param	field
+	 */
 	static function removeBaseConstructorCalls(field:Field)
 	{
 		function searchAndRemove(expr:Expr)
 		{
-			switch (expr)
+			switch (expr.expr)
 			{
-				case macro $base():
+				case ECall(_.expr => EConst(CIdent("$base")), params):
 					expr.expr = EBlock([]);
 				case _:
 					expr.iter(searchAndRemove);
@@ -462,10 +467,38 @@ class Mixin
 		{
 			case FFun(f): searchAndRemove(f.expr);
 			case _: throw "Only FFun is supported";
-		}		
+		}
 	}
 	
-	
+	/**
+	 * Replaces $base(arg1,arg2...) with super(arg1,arg2,...)
+	 * @param	field
+	 */
+	static function replaceBaseConstructorCallsWithSuper(field:Field)
+	{
+		function searchAndReplace(expr:Expr)
+		{
+			switch (expr.expr)
+			{
+				case ECall(e, params):
+					switch (e.expr)
+					{
+						case EConst(CIdent("$base")):
+							e.expr = EConst(CIdent("super"));
+						case _:
+					}					
+				case _:
+					expr.iter(searchAndReplace);
+			}
+		}
+		
+		switch (field.kind)
+		{
+			case FFun(f): searchAndReplace(f.expr);
+			case _: throw "Only FFun is supported";
+		}		
+	}
+
 	/**
 	 * Check if anywhere in the hierarchy mixin was already included		 
 	 * @param	base
@@ -564,6 +597,16 @@ class Mixin
 		return lc.isInterface && !lc.isExtern && lc.meta.has("mixin");
 	}
 	
+	static function fieldExistsInHierarchy(lc:ClassType, fieldName:String):Bool
+	{
+		while ((lc = getSuperClass(lc)) != null)
+			for (f in lc.fields.get())
+				if (f.name == fieldName)
+					return true;
+					
+		return false;
+	}
+	
 	static function getSuperClass(lc:ClassType):Null<ClassType>
 	{
 		if (lc.superClass != null)
@@ -654,6 +697,8 @@ class Mixin
 		});
 		return out;
 	}
+	
+	
 	
 	
 	/* non static */

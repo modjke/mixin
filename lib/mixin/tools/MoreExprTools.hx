@@ -43,6 +43,14 @@ class MoreExprTools
 		}
 	}
 	
+	public static function setPos(e:Expr, pos:Position):Expr
+	{
+		return { 
+			expr: e.expr,
+			pos: pos
+		}
+	}
+	
 	public static function getBoolValue(e:Expr):Null<Bool>
 	{
 		try {

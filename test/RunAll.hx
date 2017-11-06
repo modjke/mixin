@@ -6,6 +6,7 @@ import cases.OneMixinForSeveralClassesTestCase;
 import cases.OverwriteOverrideTestCase;
 import cases.ResolvingFunctionTypeTestCase;
 import cases.ShouldExtendImplementTestCase;
+import cases.autoOverride.AutoOverrideTestCase;
 import cases.conflicts.MultipleOverwritesTestCase;
 import cases.MixinTestCase;
 import cases.OverwriteCase;
@@ -34,6 +35,7 @@ class RunAll
 		runner.add(new ShouldExtendImplementTestCase());
 		runner.add(new LoggerTestCase());
 		runner.add(new ConstructorTestCase());
+		runner.add(new AutoOverrideTestCase());
 		
 		var success = runner.run();
 		

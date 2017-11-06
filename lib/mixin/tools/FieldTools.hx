@@ -97,5 +97,12 @@ class FieldTools
 		
 	}
 	
-	
+	public static function makeOverride(f:Field)
+	{
+		if (f.access == null)
+			f.access = [AOverride];
+		else 
+			if (!f.access.has(AOverride))
+				f.access.push(AOverride);
+	}
 }

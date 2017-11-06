@@ -189,8 +189,19 @@ class MixinField
 		};
 	}
 	
-	public function createEmptyBaseMethod():Field
+	public function createEmptyBaseMethod(generateSuperCall:Bool):Field
 	{
+		
+		var expr:Expr = {
+			expr: generateSuperCall ? ECall((macro super.$name).setPos(pos), [for (arg in getArgs()) (macro $i{arg.name}).setPos(pos)]) : EConst(CIdent("null")),
+			pos: pos
+		};
+		
+		var returnExpr = {
+			expr: EReturn(expr),
+			pos: pos
+		}
+			
 		return {
 			name: baseFieldName,
 			access: field.access.copy(),
@@ -201,7 +212,7 @@ class MixinField
 						args: Copy.arrayOfFunctionArg(f.args),
 						ret: Copy.complexType(f.ret),
 						params: Copy.arrayOfTypeParamDecl(f.params),
-						expr: macro return null
+						expr: returnExpr
 					});
 				case _: throw "Only FFun is supported";
 			},
@@ -209,6 +220,17 @@ class MixinField
 			meta: Copy.metadata(field.meta),
 			pos: field.pos			
 		};
+		
+		
+	}
+	
+	function getArgs():Array<FunctionArg> 
+	{
+		return switch (field.kind)
+		{
+			case FFun(f): Copy.arrayOfFunctionArg(f.args);
+			case _: throw "Not a FFun";
+		}
 	}
 	
 	function hasAccess(a:Access) return field.access != null ? field.access.has(a) : false;
