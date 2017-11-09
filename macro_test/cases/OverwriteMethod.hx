@@ -1,5 +1,5 @@
-//-test1-/Field <method> does not satisfy @overwrite mixin interface/
-//-test2-/Field <method> does not satisfy @overwrite mixin interface/
+//-test1-/Field <method> does not satisfy mixin\'s interface/
+//-test2-/Field <method> does not satisfy mixin\'s interface/
 //-test3-/@overwrite mixin method <missing> not found in (.+)/
 package cases;
 

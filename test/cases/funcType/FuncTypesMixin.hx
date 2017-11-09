@@ -35,6 +35,7 @@ typedef SomeTypedTypedef<T> = {
 		return k;
 	}
 	 
+
 	public function getComplexFunction():Void->T
 	{
 		return function ()

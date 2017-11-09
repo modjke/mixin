@@ -24,17 +24,20 @@ package mixin;
 import haxe.ds.StringMap;
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Printer;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.Ref;
 import mixin.same.Same;
+import mixin.tools.ClassFieldTools;
 import mixin.typer.Typer;
 
 
 class Mixin 
 {
 	static var mixins:StringMap<Mixin> = new StringMap();
+	static var printer = new Printer();
 	
 	public static function sugar():Array<Field>
 	{
@@ -52,7 +55,7 @@ class Mixin
 	@:noCompletion
 	static function createMixin():Array<Field>
 	{	
-		var lc = Context.getLocalClass().get();				
+		var lc = Context.getLocalClass().get();	
 		
 		if (!declaredProperly(lc)) Context.fatalError('Mixin should be declared as non-extern interface with @mixin meta present', lc.pos);
 		
@@ -124,7 +127,7 @@ class Mixin
 			}
 			
 			//ok lets go :)
-			var typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
+			var typer = new Typer(lc, Context.getLocalModule(), Context.getLocalImports());
 			
 			var overwriteCache = new StringMap<String>();
 			for (field in buildFields)
@@ -164,7 +167,7 @@ class Mixin
 						case MIXIN | OVERWRITE:
 							if (mf.meta.debug) {
 								
-								Sys.println('-- debugging: ${mf.name}');
+								Sys.println('-- debugging: ${mf.name}');								
 								Sys.println('-- before:');
 								Sys.println(mf.implementation.toString());
 							}
@@ -265,17 +268,31 @@ class Mixin
 		#else 
 			var overwriteCache = new StringMap<String>();
 
-			var typer = new Typer(Context.getLocalModule(), Context.getLocalImports());
+			var typer = new Typer(lc, Context.getLocalModule(), Context.getLocalImports());
 			
-			for (mf in cached.fields)
+			for (mf in cached.fields)			
 			{			
+				
 				//mf - mixin field
 				//cf - existing class field (can be null)
 
-				
-				
+				var isBuildField = true;
 				var cf = fields.find(function (f) return f.name == mf.name);
+				if (cf == null)
+				{
+					isBuildField = false;
+					cf = getFieldFromHierarchy(lc, mf.name);
+				}
+				
 				var mixin = mf.create(typeParams, false);	//basically a field copy, do whatever you want with it
+		
+				if (cf != null && mf.type != MIXIN)
+					if (!typer.satisfiesInterface(mixin, cf))
+					{
+						Context.warning('Field <${cf.name}> is defined here', mf.pos);
+						Context.fatalError('Field <${cf.name}> does not satisfy mixin\'s interface', cf.pos);
+					}
+				
 				switch (mf.type)
 				{
 					case MIXIN:
@@ -284,46 +301,33 @@ class Mixin
 						else 
 							Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
 					case BASE:
-						if (cf != null)
-						{
-							if (!typer.satisfiesInterface(mixin, cf))
-							{
-								Context.warning('@base field for <${cf.name}> is defined here', mf.pos);
-								Context.fatalError('Field <${cf.name}> does not satisfy @base mixin interface', cf.pos);
-							}						
-						} else 
+						if (cf == null)
 							Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
 					case OVERWRITE:
-						if (cf != null)
+						if (cf != null && isBuildField)
 						{
 							assertFieldIsNotGetSetForIsVarProperty(cf, fields);
 							
-							if (typer.satisfiesInterface(mixin, cf))
-							{
-								if (mf.isConstructor) {
-											
-									overwriteConstructor(mixin, cf);
-								} else {				
-									//mixin becames base field																
-									mixin.name = mf.baseFieldName;	
-									
-									//so we make it private
-									mixin.makePrivate();
-									if (mf.meta.inlineBase) mixin.makeInline();									
-									
-									//mixin field recieves all meta from base field
-									//class field recieves mixin's implementation
-									copyMetaAndExchangeImpl(mixin, cf);	
-									
-									overwriteCache.set(cf.name, mixin.name);
-									
-									fields.push(mixin);
-								}
-							} else 
-							{
-								Context.warning('@overwrite field for <${cf.name}> is defined here', mf.pos);
-								Context.fatalError('Field <${cf.name}> does not satisfy @overwrite mixin interface', cf.pos);
+							if (mf.isConstructor) {
+										
+								overwriteConstructor(mixin, cf);
+							} else {				
+								//mixin becames base field																
+								mixin.name = mf.baseFieldName;	
+								
+								//so we make it private
+								mixin.makePrivate();
+								if (mf.meta.inlineBase) mixin.makeInline();									
+								
+								//mixin field recieves all meta from base field
+								//class field recieves mixin's implementation
+								copyMetaAndExchangeImpl(mixin, cf);	
+								
+								overwriteCache.set(cf.name, mixin.name);
+								
+								fields.push(mixin);
 							}
+		
 							
 						} else {		
 							
@@ -339,7 +343,7 @@ class Mixin
 										removeBaseConstructorCalls(mixin);									
 								} else {
 									
-									var overridden = fieldExistsInHierarchy(lc, mf.name);
+									var overridden = !isBuildField;
 									var mockBase = mf.createEmptyBaseMethod(overridden);
 									mockBase.makePrivate();
 									
@@ -596,15 +600,16 @@ class Mixin
 	{
 		return lc.isInterface && !lc.isExtern && lc.meta.has("mixin");
 	}
-	
-	static function fieldExistsInHierarchy(lc:ClassType, fieldName:String):Bool
+		
+	static function getFieldFromHierarchy(lc:ClassType, fieldName:String):Field
 	{
 		while ((lc = getSuperClass(lc)) != null)
 			for (f in lc.fields.get())
 				if (f.name == fieldName)
-					return true;
+					return ClassFieldTools.toField(f);
+				
 					
-		return false;
+		return null;
 	}
 	
 	static function getSuperClass(lc:ClassType):Null<ClassType>

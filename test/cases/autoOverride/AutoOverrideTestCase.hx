@@ -32,6 +32,12 @@ class A {
 		fooCalled = true;
 		return arg;
 	}
+	
+	public function typed<T>(arg:T):T {
+		return arg;
+	}
+	
+	var aVar:String;
 }
 
 class B extends A implements Mixin {
@@ -40,6 +46,8 @@ class B extends A implements Mixin {
 
 @mixin interface Mixin 
 {
+	@base var aVar:String;
+	
 	@overwrite(addIfAbsent=true) public function new() {
 		$base();
 	}
@@ -47,4 +55,11 @@ class B extends A implements Mixin {
 	@overwrite(addIfAbsent=true) public function foo(arg:Int = 0):Int {
 		return $base.foo(arg);
 	}
+	
+	@overwrite(addIfAbsent = true) 
+	public function typed<T>(arg:T):T {
+		return $base.typed(arg);
+	}
+	
+	public function getAVar():String return aVar;
 }

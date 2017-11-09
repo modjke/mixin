@@ -28,6 +28,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Expr.Field;
 import haxe.macro.Printer;
+import haxe.macro.Type.ClassType;
 import mixin.io.CachedFS;
 import mixin.same.Same;
 import mixin.typer.resolver.Resolve;
@@ -37,9 +38,10 @@ class Typer
 	inline static var DEBUG = false;
 	
 	var module:String;
+	var lc:ClassType;
 	var imports:StringMap<TypePath>;
 	
-	public function new(module:String, imports:Array<ImportExpr>)
+	public function new(lc:ClassType, module:String, imports:Array<ImportExpr>)
 	{
 		if (DEBUG) {
 			trace('--');
@@ -47,7 +49,7 @@ class Typer
 		}
 		
 		this.module = module;			
-		
+		this.lc = lc;
 		this.imports = new StringMap();		
 		
 		function addImport(subModule:String, ?alias:String)
@@ -143,12 +145,35 @@ class Typer
 					params: tp.params,
 					sub: tp.sub != null ? tp.sub : imp.sub
 				}	
-			} 					
+			} else 
+			if (tp.name != null) {	
+				
+				/*
+				 * do not resolve void, causes 
+				 * Void -> A.T should be (Void) -> A.T
+				 * in case of 
+				 * public function hey():StdTypes.Void->T {
+				 * 		return function () { return v; }
+				 * }	
+				 */
+				
+				if (!hasTypeParamNamed(tp.name) && tp.name != "Void")	
+					try {
+						//resolves StdTypes
+						return Context.getType(tp.toString(true))
+							.toComplexType()
+							.extractTypePath();					
+							
+					} catch (any:Any) {}
+			}
 		} 
-		
+
 		return tp;
 	}
 	
+	function hasTypeParamNamed(name:String):Bool {
+		return lc.params.exists(function (tp) return tp.name == name);
+	}
 	
 	static function makeFieldTypeDeterminable(f:Field)
 	{
@@ -204,13 +229,23 @@ class Typer
 		
 		if (interf.name == field.name)			
 		{
-			var ap = interf.pos;
-			var bp = field.pos;
+			var ikind = switch (interf.kind) {
+				case FVar(t, e): FProp("default", "default", t, e);
+				case _: interf.kind;
+			}
 			
-			return switch ([interf.kind,field.kind])
+			var fkind = switch (field.kind) {
+				case FVar(t, e): FProp("default", "default", t, e);
+				case _: field.kind;
+			}
+			
+			return switch ([ikind, fkind ])
 			{
 				case [FFun(af), FFun(bf)]:
 					
+					//trace("Same function args: " + Same.functionArgs(af.args, bf.args, this));
+					//trace("Same return type: " + Same.complexTypes(af.ret, bf.ret, this));
+					//trace("Same type param decl: " + Same.typeParamDecls(af.params, bf.params));
 					Same.functionArgs(af.args, bf.args, this) &&
 					Same.complexTypes(af.ret, bf.ret, this) &&
 					Same.typeParamDecls(af.params, bf.params);												
