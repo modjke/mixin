@@ -127,6 +127,7 @@ class Mixin
 			}
 			
 			//ok lets go :)
+
 			var typer = new Typer(lc, Context.getLocalModule(), Context.getLocalImports());
 			
 			var overwriteCache = new StringMap<String>();

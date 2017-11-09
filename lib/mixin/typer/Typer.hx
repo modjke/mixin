@@ -61,10 +61,11 @@ class Typer
 				trace('$alias => ${tp.toString(false)}');
 			
 			var existed = this.imports.get(alias);
+			
 			if (existed != null && !Same.typePaths(existed, tp))					
 				throw 'Typer has already mapped ${alias} to ${tp.toString(false)}'; //that should not happen, but im cautious 
 						
-			this.imports.set(alias, { pack: tp.pack, name: tp.name, sub: tp.sub });
+			this.imports.set(alias, { pack: tp.pack, name: tp.name, sub: tp.sub, params: [] });
 		}
 		
 		var modulePath = Path.withExtension(module.replace(".", "/"), "hx");

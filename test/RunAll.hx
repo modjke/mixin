@@ -4,6 +4,7 @@ import cases.CopyTest;
 import cases.ExtendingMixinsTestCase;
 import cases.OneMixinForSeveralClassesTestCase;
 import cases.OverwriteOverrideTestCase;
+import cases.overwriteSetterParent.OverwriteSetterInParentTestCase;
 import cases.ResolvingFunctionTypeTestCase;
 import cases.ShouldExtendImplementTestCase;
 import cases.autoOverride.AutoOverrideTestCase;
@@ -20,6 +21,7 @@ class RunAll
 {
 	public static function main()
 	{
+	
 		var runner = new TestRunner();
 		
 		runner.add(new AutoImportsTestCase());
@@ -36,6 +38,7 @@ class RunAll
 		runner.add(new LoggerTestCase());
 		runner.add(new ConstructorTestCase());
 		runner.add(new AutoOverrideTestCase());
+		runner.add(new OverwriteSetterInParentTestCase());
 		
 		var success = runner.run();
 		
@@ -44,3 +47,5 @@ class RunAll
 	}
 	
 }
+
+

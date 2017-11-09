@@ -68,7 +68,7 @@ class Same
 	{
 		//comparing two TypePaths assumes that params is never null
 		//even though it is declared as @:optional
-		//also TypePathTools.toTypePath relies on  that assumption
+		//also TypePathTools.toTypePath relies on  that assumption		
 		if (a.params == null) throw "Probably an invalid TypePath (a)";
 		if (b.params == null) throw "Probably an invalid TypePath (b)";
 		
