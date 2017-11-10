@@ -149,26 +149,39 @@ class Typer
 			} else 
 			if (tp.name != null) {	
 				
-				/*
-				 * do not resolve void, causes 
-				 * Void -> A.T should be (Void) -> A.T
-				 * in case of 
-				 * public function hey():StdTypes.Void->T {
-				 * 		return function () { return v; }
-				 * }	
-				 */
-				
-				if (!hasTypeParamNamed(tp.name) && tp.name != "Void")	
+				if (!hasTypeParamNamed(tp.name))	
 					try {
 						//resolves StdTypes
-						return Context.getType(tp.toString(true))
+						var stdTp = Context.getType(tp.toString(true))
 							.toComplexType()
-							.extractTypePath();					
+							.extractTypePath();		
+							
+						return resolveVoid(stdTp);
 							
 					} catch (any:Any) {}
 			}
 		} 
 
+		return resolveVoid(tp);
+	}
+	
+	/*
+	 * https://github.com/HaxeFoundation/haxe/issues/6739
+	 * 
+	 * do not resolve void, causes 
+	 * Void -> A.T should be (Void) -> A.T
+	 * in case of 
+	 * public function hey():StdTypes.Void->T {
+	 * 		return function () { return v; }
+	 * }	
+	 */
+	inline function resolveVoid(tp:TypePath):TypePath
+	{		
+		if (tp.pack.length == 0 && tp.name == "StdTypes" && tp.sub == "Void") {
+			tp.name = "Void";
+			tp.sub = null;
+		}
+			
 		return tp;
 	}
 	
@@ -240,15 +253,22 @@ class Typer
 				case _: field.kind;
 			}
 			
+			
+			
 			return switch ([ikind, fkind ])
 			{
 				case [FFun(af), FFun(bf)]:
 					
+
+					var afRet = af.ret != null ? af.ret : macro:Void;
+					var bfRet = bf.ret != null ? bf.ret : macro:Void;
+
 					//trace("Same function args: " + Same.functionArgs(af.args, bf.args, this));
-					//trace("Same return type: " + Same.complexTypes(af.ret, bf.ret, this));
+					//trace("Same return type: " + Same.complexTypes(afRet, bfRet, this));
 					//trace("Same type param decl: " + Same.typeParamDecls(af.params, bf.params));
+
 					Same.functionArgs(af.args, bf.args, this) &&
-					Same.complexTypes(af.ret, bf.ret, this) &&
+					Same.complexTypes(afRet, bfRet, this) &&
 					Same.typeParamDecls(af.params, bf.params);												
 					
 				case [FProp(ag, as, at, ae), FProp(bg, bs, bt, be)]:

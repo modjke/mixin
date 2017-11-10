@@ -34,20 +34,13 @@ import mixin.typer.Typer;
 
 @:publicFields
 class Same 
-{
-	/**
-	 * Checks if funcitons args are the same,
-	 * ATTENTION: ignores args default expressions
-	 */
+{	
 	static function functionArgs(a:Array<FunctionArg>, b:Array<FunctionArg>, ?typer:Typer):Bool
 	{	
 		return arrays(a, b, function(a, b)
 		{
-			var aOpt = a.opt || a.value != null;
-			var bOpt = b.opt || b.value != null;
-						
 			return  a.name == b.name &&
-					aOpt == bOpt &&
+					a.opt == b.opt &&
 					metadatas(a.meta, b.meta) &&					
 					complexTypes(a.type, b.type, typer) &&
 					exprs(a.value, b.value);

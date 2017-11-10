@@ -267,8 +267,6 @@ class Mixin
 				}
 			}
 		#else 
-			var overwriteCache = new StringMap<String>();
-
 			var typer = new Typer(lc, Context.getLocalModule(), Context.getLocalImports());
 			
 			for (mf in cached.fields)			
@@ -287,12 +285,17 @@ class Mixin
 				
 				var mixin = mf.create(typeParams, false);	//basically a field copy, do whatever you want with it
 		
-				if (cf != null && mf.type != MIXIN)
-					if (!typer.satisfiesInterface(mixin, cf))
-					{
-						Context.warning('Field <${cf.name}> is defined here', mf.pos);
-						Context.fatalError('Field <${cf.name}> does not satisfy mixin\'s interface', cf.pos);
-					}
+				
+				inline function assertSatisfiesInterface()
+				{
+					if (cf != null)
+						if (!typer.satisfiesInterface(mixin, cf))
+						{
+							Context.warning('Field <${cf.name}> is defined here', mf.pos);
+							Context.fatalError('Field <${cf.name}> does not satisfy mixin\'s interface', cf.pos);
+						}
+				}
+				
 				
 				switch (mf.type)
 				{
@@ -302,66 +305,66 @@ class Mixin
 						else 
 							Context.fatalError('@mixin field <${mf.name}> overlaps base field with the same name in ${classFql}', cf.pos);
 					case BASE:
+						assertSatisfiesInterface();
+						
 						if (cf == null)
 							Context.fatalError('@base field <${mf.name}> required by mixin not found in ${classFql}', lc.pos);
 					case OVERWRITE:
-						if (cf != null && isBuildField)
+						assertSatisfiesInterface();
+						
+						if (cf != null || mf.meta.addIfAbsent)
 						{
-							assertFieldIsNotGetSetForIsVarProperty(cf, fields);
-							
-							if (mf.isConstructor) {
+							//when isBuildField is true, cf is always NOT NULL
+							//if base class itself has declared that field
+							if (isBuildField) {
+								
+								//fail if this is getter or setter for @:isVar proprerty
+								assertFieldIsNotGetSetForIsVarProperty(cf, fields);
+								
+								if (mf.isConstructor) {
+									overwriteConstructor(mixin, cf);
+								} else {
+									mixin.name = mf.baseFieldName;	
+									
+									//so we make it private
+									mixin.makePrivate();
+									if (mf.meta.inlineBase) mixin.makeInline();									
+									
+									//mixin field recieves all meta from base field
+									//class field recieves mixin's implementation
+									copyMetaAndExchangeImpl(mixin, cf);	
+									
+									fields.push(mixin);
+								}
+								
+							} else {
+								//isBuildField = false
+								//cf can be NULL								
+								if (mf.isConstructor) {
+									//if any of the super classes have constructor
+									if (cf != null) 
+										replaceBaseConstructorCallsWithSuper(mixin);						
+									else 
+										removeBaseConstructorCalls(mixin);
 										
-								overwriteConstructor(mixin, cf);
-							} else {				
-								//mixin becames base field																
-								mixin.name = mf.baseFieldName;	
-								
-								//so we make it private
-								mixin.makePrivate();
-								if (mf.meta.inlineBase) mixin.makeInline();									
-								
-								//mixin field recieves all meta from base field
-								//class field recieves mixin's implementation
-								copyMetaAndExchangeImpl(mixin, cf);	
-								
-								overwriteCache.set(cf.name, mixin.name);
+								} else {
+									var shouldBeOverridden = cf != null;
+									var mockBase = mf.createEmptyBaseMethod(shouldBeOverridden);
+									mockBase.makePrivate();
+									
+									if (shouldBeOverridden) 
+										mixin.makeOverride();
+									
+									fields.push(mockBase);
+								}
 								
 								fields.push(mixin);
 							}
-		
 							
-						} else {		
 							
-							fields.push(mixin);	
-							
-							if (mf.meta.addIfAbsent) {
-								
-								var hasSuperClass = getSuperClass(lc) != null;
-								if (mf.isConstructor) {
-									if (hasSuperClass)
-										replaceBaseConstructorCallsWithSuper(mixin)
-									else 
-										removeBaseConstructorCalls(mixin);									
-								} else {
-									
-									var overridden = !isBuildField;
-									var mockBase = mf.createEmptyBaseMethod(overridden);
-									mockBase.makePrivate();
-									
-									if (!overridden) 
-										mockBase.makeInline();
-									
-									fields.push(mockBase);
-									
-									if (overridden) 
-										mixin.makeOverride();
-										
-								}
-								
-														
-							} else 
-								Context.fatalError('@overwrite mixin method <${mf.name}> not found in ${classFql} (@overwrite(addIfAbsent=true) to add anyway)', lc.pos);						
-						}
+						} else 
+							Context.fatalError('@overwrite mixin method <${mf.name}> not found in ${classFql} (@overwrite(addIfAbsent=true) to add anyway)', lc.pos);						
+						
 						
 						
 				}
@@ -604,10 +607,15 @@ class Mixin
 		
 	static function getFieldFromHierarchy(lc:ClassType, fieldName:String):Field
 	{
-		while ((lc = getSuperClass(lc)) != null)
-			for (f in lc.fields.get())
-				if (f.name == fieldName)
-					return ClassFieldTools.toField(f);
+		while ((lc = getSuperClass(lc)) != null) {
+			if (fieldName == "new") {
+				if (lc.constructor != null)
+					return ClassFieldTools.toField(lc.constructor.get());
+			} else 			
+				for (f in lc.fields.get())
+					if (f.name == fieldName)
+						return ClassFieldTools.toField(f);
+		}
 				
 					
 		return null;

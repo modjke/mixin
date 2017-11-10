@@ -42,18 +42,6 @@ class ClassFieldTools
 
 	public static function toField(cf:ClassField):Field
 	{
-		function varAccessToString(va : VarAccess, getOrSet : String) : String return {
-			switch (va) {
-				case AccNormal: "default";
-				case AccNo: "null";
-				case AccNever: "never";
-				case AccResolve: throw "Invalid TAnonymous";
-				case AccCall: getOrSet;
-				case AccInline: "default";
-				case AccRequire(_, _): "default";
-				default: throw 'Not implemented for $va ($getOrSet)';
-			}
-		}
 		
 		var type = switch (cf.type)
 		{
@@ -106,6 +94,20 @@ class ClassFieldTools
 	}
 	
 	
+	static function varAccessToString(va : VarAccess, getOrSet : String) : String 
+		return {
+			switch (va) {
+				case AccNormal: "default";
+				case AccNo: "null";
+				case AccNever: "never";
+				case AccResolve: throw "Invalid TAnonymous";
+				case AccCall: getOrSet;
+				case AccInline: "default";
+				case AccRequire(_, _): "default";
+				default: throw 'Not implemented for $va ($getOrSet)';
+			}
+		}
+		
 	static function typeParameterToTypeParamDecl(tp:TypeParameter):TypeParamDecl
 	{
 		var classType:ClassType;
