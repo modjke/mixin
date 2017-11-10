@@ -45,8 +45,19 @@ var logger:Logger = new A();
 logger.log("Hey");
 ```
 
-
 ## Features
+
+### List
+
+* Mixin is an interface with implementation
+* Can include it's properties and methods into any class
+* Can overwrite base class methods and constructors
+* Can declare base class requirements
+* Encourages code reuse
+* Inheritance (you) vs composition (that guy she tells you not to worry about)
+* Made with top-notch compile-time macros, no runtime overhead
+
+### Details
 
 ##### Call base class method within mixin and vice versa
 
@@ -92,11 +103,10 @@ Since including above mixin inside a class that have no base() method will resul
 
 * Overwrite any base class method by adding `@overwrite([ignoreBaseCalls = false], [inlineBase = false], [addIfAbsent = false])` meta
 * To call overwritten base method use `$base.method()`
-* You can inline `$base.method()` call by setting `inlineBase=true`
-* Calling $base method is mandatory, `ignoreBaseCalls=true` to make it optional
 * Overwriting non-existent base method will trigger an error by default, `addIfAbsent=true` will add non-existent base method with all super calls in place if needed
-* Be alert: `addIfAbsent=true` can cause all sorts of wierd errors if mixin field and super class field declaration differs
+* Calling $base method is mandatory, `ignoreBaseCalls=true` to make it optional
 * *Multiple mixins can overwrite the same method, if one of them is not calling base method behaviour is undefined*
+* Base method can be inlined by setting `inlineBase=true` (super calls and multiple returns are not supported)
 ```haxe
 class Object implements Mixin {
 	public function foo(arg:Int):Void {
@@ -137,7 +147,7 @@ class Object implements VeryNastyMixin {
 
 ##### Overwriting constructor
 
-* Constructor can be overwritten to perform some mixin initialisation
+* Constructor can be overwritten to perform some mixin initialization
 * Similar to overwriting methods but base constructor can be called only once as `$base()`
 * Overwriting constructors with return statements is not supported
 ```haxe
