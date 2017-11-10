@@ -1,6 +1,29 @@
+/*
+Copyright (c) 2017 Ignatiev Mikhail (https://github.com/modjke) <ignatiev.work@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 package mixin.tools;
+
 import haxe.macro.Context;
 import haxe.macro.Expr.Field;
+import haxe.macro.Expr.Function;
 import haxe.macro.Expr.TypeParamDecl;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
@@ -50,21 +73,23 @@ class ClassFieldTools
 						var get = varAccessToString(read, "get");
 						var set = varAccessToString(write, "set");
 						
-						
-						FProp(get, set, toComplexType(ret), null);
+						var typedExpr = cf.expr();
+						var expr = typedExpr != null ? Context.getTypedExpr(typedExpr) : null;
+						FProp(get, set, toComplexType(ret), expr);
 							
 					case [ FMethod(_), TFun(args, ret) ]:
+						
+						// extract Expr.Function
+						var f = switch (Context.getTypedExpr(cf.expr()).expr)
+						{
+							case EFunction(_, f): f;
+							case _: throw "Invalid function expression";
+						}
+						
 						FFun({
-							args: [
-								for (a in args) {
-									name: a.name,
-									opt: a.opt,
-									type: toComplexType(a.t),
-									meta: []
-								}
-							],
-							ret: toComplexType(ret),
-							expr: null,
+							args: f.args,
+							ret: f.ret,
+							expr: f.expr,
 							params: cf.params.map(typeParameterToTypeParamDecl)
 						});
 						

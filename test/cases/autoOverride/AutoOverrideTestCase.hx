@@ -37,7 +37,7 @@ class A {
 		return arg;
 	}
 	
-	var aVar:String;
+	var aVar:String = "20";
 }
 
 class B extends A implements Mixin {

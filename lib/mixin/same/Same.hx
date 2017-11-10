@@ -49,7 +49,8 @@ class Same
 			return  a.name == b.name &&
 					aOpt == bOpt &&
 					metadatas(a.meta, b.meta) &&					
-					complexTypes(a.type, b.type, typer);
+					complexTypes(a.type, b.type, typer) &&
+					exprs(a.value, b.value);
 		});
 	}
 	
