@@ -10,7 +10,7 @@
 		"modjke"
 	],
 	"releasenote": "fancy readme, proper super class field resolution, 'must-update' update",
-	"version": "0.9.4",
+	"version": "0.9.5",
 	"url": "https://github.com/modjke/mixin",
 	"dependencies": {		
 	}
