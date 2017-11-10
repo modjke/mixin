@@ -4,6 +4,16 @@ Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4
 * *PRs/bug reports/feature requests are welcomed*
 
 [![Build Status](https://travis-ci.org/modjke/mixin.svg?branch=master)](https://travis-ci.org/modjke/mixin)
+	
+## Features
+
+* Mixin is an interface with implementation
+* Can include (add) it's properties and methods into any class
+* Can overwrite base class methods and constructors
+* Can declare base class requirements
+* Encourages code reuse
+* Inheritance (you) vs composition (that guy she tells you not to worry about)
+* Made with top-notch compile-time macros, no runtime overhead
 
 ## Installation
  * Haxelib version: `haxelib install mixin` and `-lib mixin`
@@ -45,19 +55,9 @@ var logger:Logger = new A();
 logger.log("Hey");
 ```
 
-## Features
 
-### List
 
-* Mixin is an interface with implementation
-* Can include it's properties and methods into any class
-* Can overwrite base class methods and constructors
-* Can declare base class requirements
-* Encourages code reuse
-* Inheritance (you) vs composition (that guy she tells you not to worry about)
-* Made with top-notch compile-time macros, no runtime overhead
-
-### Details
+## Implementation details
 
 ##### Call base class method within mixin and vice versa
 
