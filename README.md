@@ -1,7 +1,8 @@
-﻿# Mixins for haxe [(lib.haxe.org/p/mixin)](http://lib.haxe.org/p/mixin)
-Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4  
-* *haxe 4.0 will be supported after a stable release*  
-* *PRs/bug reports/feature requests are welcomed*
+### Maintaince mode
+Not supporting this
+
+# Mixins for haxe [(lib.haxe.org/p/mixin)](http://lib.haxe.org/p/mixin)
+Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4 
 
 [![Build Status](https://travis-ci.org/modjke/mixin.svg?branch=master)](https://travis-ci.org/modjke/mixin)
 	
