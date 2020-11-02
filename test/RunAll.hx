@@ -14,6 +14,7 @@ import cases.OverwriteCase;
 import cases.constructor.ConstructorTestCase;
 import cases.readme.LoggerTestCase;
 import cases.stateMachine.StateMachineTestCase;
+import cases.FunctionNullFromVoidTestCase;
 import haxe.unit.TestRunner;
 
 
@@ -25,6 +26,7 @@ class RunAll
 		var runner = new TestRunner();
 		
 		runner.add(new AutoImportsTestCase());
+		runner.add(new FunctionNullFromVoidTestCase());
 		runner.add(new MixinTestCase());
 		runner.add(new OverwriteCase());
 		runner.add(new MultipleOverwritesTestCase());
