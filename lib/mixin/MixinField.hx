@@ -196,9 +196,9 @@ class MixinField
 			expr: generateSuperCall ? ECall((macro super.$name).setPos(pos), [for (arg in getArgs()) (macro $i{arg.name}).setPos(pos)]) : EConst(CIdent("null")),
 			pos: pos
 		};
-		
+
 		var returnExpr = {
-			expr: EReturn(expr),
+			expr: EReturn(isVoidMethod() ? null : expr),
 			pos: pos
 		}
 			
@@ -223,12 +223,22 @@ class MixinField
 		
 		
 	}
-	
 	function getArgs():Array<FunctionArg> 
 	{
 		return switch (field.kind)
 		{
 			case FFun(f): Copy.arrayOfFunctionArg(f.args);
+			case _: throw "Not a FFun";
+		}
+	}
+
+	function isVoidMethod() {
+		return switch (field.kind)
+		{
+			case FFun(_.ret => TPath({ name: 'Void', params: [], sub: null })): 
+				true;
+			case FFun(t): 
+				false;
 			case _: throw "Not a FFun";
 		}
 	}

@@ -100,10 +100,10 @@ class Resolve
 				TOptional( typeParam(t, resolve) );
 
 			case TNamed(n, t):
-				TNamed(n, t);
+				TNamed(n, typeParam(t, resolve) );
 				
-			case TIntersection( tl ):
-				TIntersection(tl);
+			case TIntersection( args ):
+				TIntersection( [ for (t in args) typeParam(t, resolve) ]);
 				
 		}
 		

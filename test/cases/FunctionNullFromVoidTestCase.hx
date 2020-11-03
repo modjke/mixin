@@ -26,12 +26,17 @@ class FunctionNullFromVoidTestCase extends TestCase
 
 class MixinImpl implements SomeMixin {
 	public function new() {
-		update();
+		voidMethod();
+		intMethod();
 	}
 }
 
 @mixin interface SomeMixin {
-	@overwrite(addIfAbsent=true) function update():Void {
-		$base.update();
+	@overwrite(addIfAbsent=true) function voidMethod():Void {
+		$base.voidMethod();		
+	}
+
+	@overwrite(addIfAbsent=true) function intMethod():Null<Int> {
+		return $base.intMethod();
 	}
 }

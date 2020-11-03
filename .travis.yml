@@ -10,6 +10,7 @@ notifications:
 
 haxe:
   - "3.4.7"
+  - "4.1.4"
 
 script:
   - haxe macro-test-runner.hxml && neko macro_test/test_runner.n

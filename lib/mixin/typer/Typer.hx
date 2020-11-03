@@ -99,10 +99,8 @@ class Typer
 				case IAsName(alias): 
 					addImport(subModule, alias);					
 					
-				case IAll:
-					// TODO: Is this catch really necessary?
-					//throw 'Wildcard imports are not supported in mixins';
-					
+				case IAll:					
+					throw 'Wildcard imports are not supported in mixins';	// ComplexType resolution is mostly manual, Mixin should know the exact location of an import
 			}			
 		}
 		
