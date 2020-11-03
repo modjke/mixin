@@ -215,7 +215,7 @@ class Object implements Collection<String> {
 * import.hx is not *yet* supported (that said everything would work if you have the same import.hx for mixin and base class module, but in that case your mixin will depend on import.hx location)
 
 ## Lincese
-Copyright (c) 2017 Ignatiev Mikhail (https://github.com/modjke) <ignatiev.work@gmail.com>
+Copyright (c) 2020 Ignatiev Mikhail (https://github.com/modjke) <ignatiev.work@gmail.com>
 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy  
