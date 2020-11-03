@@ -9,7 +9,7 @@ notifications:
     on_failure: never
 
 haxe:
-  - "3.4.4"
+  - "3.4.7"
 
 script:
   - haxe macro-test-runner.hxml && neko macro_test/test_runner.n
