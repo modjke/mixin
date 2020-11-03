@@ -1,5 +1,5 @@
 ### Maintaince mode
-Not supporting this
+Bug fixes only, PRs as are still welcomed
 
 # Mixins for haxe [(lib.haxe.org/p/mixin)](http://lib.haxe.org/p/mixin)
 Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4 
