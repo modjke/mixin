@@ -98,6 +98,13 @@ class Resolve
 				
 			case TOptional( t ):
 				TOptional( typeParam(t, resolve) );
+
+			case TNamed(n, t):
+				TNamed(n, t);
+				
+			case TIntersection( tl ):
+				TIntersection(tl);
+				
 		}
 		
 		return resolved != null ? resolved : type;
@@ -385,6 +392,12 @@ class Resolve
 				
 			case TOptional( t ):
 				TOptional( complexType(t, map) );
+
+			case TNamed(n, t):
+				TNamed(n, t);
+				
+			case TIntersection( tl ):
+				TIntersection(tl);
 		}
 	}
 	

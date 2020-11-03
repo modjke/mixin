@@ -1,5 +1,7 @@
 extraParams.hxml
 
+-L hx3compat
+
 -cp lib
 -cp test
 
