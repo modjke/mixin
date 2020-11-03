@@ -80,6 +80,10 @@ class Copy
 				TExtend(Copy.arrayOfTypePath(p), Copy.arrayOfField(fields));
 			case TOptional (t): 
 				TOptional(Copy.complexType(t));
+			case TNamed(n, t):
+				TNamed(n, Copy.complexType(t));	
+			case TIntersection( tl ):
+				TIntersection(Copy.arrayOfComplexType(tl));
 		}
 	}
 	

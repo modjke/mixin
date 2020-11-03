@@ -33,6 +33,7 @@ import mixin.same.Same;
 import mixin.tools.ClassFieldTools;
 import mixin.typer.Typer;
 
+#if macro
 
 class Mixin 
 {
@@ -225,6 +226,12 @@ class Mixin
 		var classFql = getFqlClassName(lc);				
 		var fields = Context.getBuildFields();
 		var cached = mixins.get(mixinFql);
+
+		#if display
+		if(null == cached) {
+			return null;
+		}
+		#end
 		
 		for (shouldImplement in cached.baseImplements)
 		{
@@ -731,3 +738,5 @@ class Mixin
 		this.baseImplements = baseImplements;
 	}
 }
+
+#end
