@@ -12,5 +12,6 @@ haxe:
   - "4.1.4"
 
 script:
+  - haxelib install hx3compat
   - haxe macro-test-runner.hxml && neko macro_test/test_runner.n
   - haxe test.hxml
