@@ -2,8 +2,9 @@
 Bug fixes only, PRs as are still welcomed
 
 # Mixins for haxe [(lib.haxe.org/p/mixin)](http://lib.haxe.org/p/mixin)
-Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4 
+Macro-powered [mixin](https://en.wikipedia.org/wiki/Mixin) system for haxe 3.4 (branch 3.4) and 4.1+ (master)
 
+Tested with travis against Haxe 4.1.4  
 [![Build Status](https://travis-ci.org/modjke/mixin.svg?branch=master)](https://travis-ci.org/modjke/mixin)
 	
 ## Features

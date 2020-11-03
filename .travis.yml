@@ -9,7 +9,6 @@ notifications:
     on_failure: never
 
 haxe:
-  - "3.4.7"
   - "4.1.4"
 
 script:
